@@ -1,14 +1,3 @@
-export function getPromise(): {
-    promise: Promise<any>;
-    resolve: (val: any) => any;
-} {
-    let cb: (val: any) => any;
-    const promise = new Promise<any>(resolve => {
-        cb = resolve;
-    });
-    return { promise, resolve: cb };
-}
-
 export async function* iterStream<T>(stream: ReadableStream<T>) {
     const reader = stream.getReader();
     try {
@@ -39,4 +28,16 @@ export async function streamToString(stream: ReadableStream<string>): Promise<st
         str += item;
 
     return str;
+}
+
+export function streamWithProgress(onProgress: (bytesRead: number) => void) {
+    let bytesRead = 0;
+
+    return new TransformStream({
+        transform(chunk, controller) {
+            bytesRead += chunk.byteLength;
+            onProgress(bytesRead);
+            controller.enqueue(chunk);
+        },
+    });
 }

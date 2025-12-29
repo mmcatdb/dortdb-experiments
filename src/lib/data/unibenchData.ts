@@ -1,7 +1,7 @@
-import { type ExtractedFileOptions } from '@/lib/dataloaders/zip/zip-extractor.js';
 import { type SqlTuple } from '@/types/common';
 import { ColumnType } from '@/types/data';
 import { type GraphologyGraph } from '@dortdb/lang-cypher';
+import { type InputFile, type InputDataFile } from '../dataloaders/schema';
 
 export type UnibenchData = {
     customers: SqlTuple[];
@@ -15,11 +15,7 @@ export type UnibenchData = {
     posts: SqlTuple[];
 };
 
-export type UnibenchObjectKeys = keyof {
-    [K in keyof UnibenchData as UnibenchData[K] extends SqlTuple[] ? K : never]: unknown;
-};
-
-export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
+const innerFiles: Record<string, InputDataFile> = {
     'Dataset/Customer/person_0_0.csv': {
         type: 'csv',
         key: 'customers',
@@ -121,7 +117,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
     //     key: 'orders',
     // },
     'Dataset/SocialNetwork/person_hasInterest_tag_0_0.csv': {
-        type: 'graph',
+        type: 'csv',
+        key: 'hasInterest',
         columns: [
             { name: 'Person.id', type: ColumnType.int, graphType: 'from' },
             { name: 'Tag.id', type: ColumnType.int, graphType: 'to' },
@@ -132,7 +129,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
         },
     },
     'Dataset/SocialNetwork/person_knows_person_0_0.csv': {
-        type: 'graph',
+        type: 'csv',
+        key: 'knows',
         columns: [
             { name: 'from', type: ColumnType.int, graphType: 'from' },
             { name: 'to', type: ColumnType.int, graphType: 'to' },
@@ -144,7 +142,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
         },
     },
     'Dataset/SocialNetwork/post_hasCreator_person_0_0.csv': {
-        type: 'graph',
+        type: 'csv',
+        key: 'hasCreator',
         columns: [
             { name: 'PostId', type: ColumnType.int, graphType: 'from' },
             { name: 'PersonId', type: ColumnType.int, graphType: 'to' },
@@ -155,7 +154,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
         },
     },
     'Dataset/SocialNetwork/post_hasTag_tag_0_0.csv': {
-        type: 'graph',
+        type: 'csv',
+        key: 'hasTag',
         columns: [
             { name: 'PostId', type: ColumnType.int, graphType: 'from' },
             { name: 'TagId', type: ColumnType.int, graphType: 'to' },
@@ -167,16 +167,30 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
     },
 };
 
-const keepKeys: (keyof typeof unibenchFilesTemp)[] = [
-    'Dataset/SocialNetwork/person_knows_person_0_0.csv',
-    'Dataset/Customer/person_0_0.csv',
-    'Dataset/SocialNetwork/post_0_0.csv',
-];
+export const unibenchFile: InputFile = {
+    type: 'zip',
+    files: innerFiles,
+};
 
-// TODO
-export const unibenchFiles = Object.fromEntries(keepKeys.map(key => [ key, unibenchFilesTemp[key] ]));
-
-export const unibenchGraphTables: Record<string, UnibenchObjectKeys> = {
-    person: 'customers',
-    post: 'posts',
+const graphFiles = {
+    'Dataset/SocialNetwork/person_hasInterest_tag_0_0.csv': {
+        key: 'hasInterest',
+        fromKey: 'customers',
+        toKey: '',
+    },
+    'Dataset/SocialNetwork/person_knows_person_0_0.csv': {
+        key: 'knows',
+        fromKey: 'customers',
+        toKey: 'customers',
+    },
+    'Dataset/SocialNetwork/post_hasCreator_person_0_0.csv': {
+        key: 'hasCreator',
+        fromKey: 'posts',
+        toKey: 'customers',
+    },
+    'Dataset/SocialNetwork/post_hasTag_tag_0_0.csv': {
+        key: 'hasTag',
+        fromKey: 'posts',
+        toKey: '',
+    },
 };

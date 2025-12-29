@@ -1,35 +1,24 @@
 import { type Datasource } from './common';
-import { type TpchData, tpchFiles } from './tpchData';
-import { extractArchive } from '../dataloaders/zip/zip-extractor';
-import { iterStream } from '../dataloaders/utils';
+import { type TpchData, tpchFile } from './tpchData';
+import { streamWithProgress } from '../dataloaders/utils';
+import { parseFile } from '../dataloaders/parsers/fileParser';
 
 export class TpchService implements Datasource{
     readonly name = 'TPCH';
 
     // private data = signal<TpchData>(null);
 
-    public downloadData(): Promise<TpchData> {
-        let bytesRead = 0;
-        const stream = async function* (this: TpchService) {
-            const resp = await fetch('tpch.zip');
-            const rawData = new ArrayBuffer(+resp.headers.get('Content-Length')!);
-            const rawDataView = new Uint8Array(rawData);
-            for await (const chunk of iterStream(resp.body!)) {
-                rawDataView.set(chunk, bytesRead);
-                bytesRead += chunk.length;
-                yield chunk;
-            }
-        }.bind(this)();
-        return this.processArchive(stream);
-    }
+    public async downloadData(): Promise<TpchData> {
+        const response = await fetch('tpch.zip');
+        const totalBytes = +response.headers.get('Content-Length')!;
 
-    private async processArchive(archive: AsyncIterable<Uint8Array<ArrayBufferLike>>): Promise<TpchData> {
-        console.log('Processing TPCH archive...');
-        const result = (await extractArchive(archive, tpchFiles)) as TpchData;
+        const stream = response.body!.pipeThrough(streamWithProgress((bytesRead: number) => {
+            console.log('progress', bytesRead / totalBytes);
+        }));
 
-        console.log('TPCH archive processed successfully.');
-
+        const result = (await parseFile(stream, tpchFile)) as TpchData;
         // this.data.set(result);
+
         return result;
     }
 }

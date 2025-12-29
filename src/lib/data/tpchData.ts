@@ -1,5 +1,6 @@
-import { type ExtractedFileOptions } from '@/lib/dataloaders/zip/zip-extractor';
 import { type SqlValue } from '@/types/common';
+import { type InputDataFile, type InputZipFile } from '../dataloaders/schema';
+import { ColumnType } from '@/types/data';
 
 export type TpchData = {
     customer: SqlValue[];
@@ -12,171 +13,153 @@ export type TpchData = {
     supplier: SqlValue[];
 };
 
-export const tpchFiles: Record<string, ExtractedFileOptions> = {
+const innerFiles: Record<string, InputDataFile> = {
     'customer.tbl': {
         type: 'csv',
         key: 'customer',
         columns: [
-            'custkey',
-            'name',
-            'address',
-            'nationkey',
-            'phone',
-            'acctbal',
-            'mktsegment',
-            'comment',
+            // FIXME Data types are not guarranteed to be correct - some check is needed.
+            { name: 'custkey', type: ColumnType.int },
+            { name: 'name', type: ColumnType.string },
+            { name: 'address', type: ColumnType.string },
+            { name: 'nationkey', type: ColumnType.int },
+            { name: 'phone', type: ColumnType.string },
+            { name: 'acctbal', type: ColumnType.real },
+            { name: 'mktsegment', type: ColumnType.string },
+            { name: 'comment', type: ColumnType.string },
         ],
         csvOptions: {
             separator: '|',
-            cast: {
-                custkey: Number,
-                nationkey: Number,
-                acctbal: Number,
-            },
+            // FIXME actually don't know ...
+            hasHeader: false,
         },
     },
     'lineitem.tbl': {
         type: 'csv',
         key: 'lineitem',
         columns: [
-            'orderkey',
-            'partkey',
-            'suppkey',
-            'linenumber',
-            'quantity',
-            'extendedprice',
-            'discount',
-            'tax',
-            'returnflag',
-            'linestatus',
-            'shipdate',
-            'commitdate',
-            'receiptdate',
-            'shipinstruct',
-            'shipmode',
-            'comment',
+            { name: 'orderkey', type: ColumnType.int },
+            { name: 'partkey', type: ColumnType.int },
+            { name: 'suppkey', type: ColumnType.int },
+            { name: 'linenumber', type: ColumnType.int },
+            { name: 'quantity', type: ColumnType.real },
+            { name: 'extendedprice', type: ColumnType.real },
+            { name: 'discount', type: ColumnType.real },
+            { name: 'tax', type: ColumnType.real },
+            { name: 'returnflag', type: ColumnType.string },
+            { name: 'linestatus', type: ColumnType.string },
+            { name: 'shipdate', type: ColumnType.date },
+            { name: 'commitdate', type: ColumnType.date },
+            { name: 'receiptdate', type: ColumnType.date },
+            { name: 'shipinstruct', type: ColumnType.string },
+            { name: 'shipmode', type: ColumnType.string },
+            { name: 'comment', type: ColumnType.string },
         ],
         csvOptions: {
             separator: '|',
-            cast: {
-                orderkey: Number,
-                partkey: Number,
-                suppkey: Number,
-                linenumber: Number,
-                quantity: Number,
-                extendedprice: Number,
-                discount: Number,
-                tax: Number,
-                shipdate: d => new Date(d),
-                commitdate: d => new Date(d),
-                receiptdate: d => new Date(d),
-            },
+            hasHeader: false,
         },
     },
     'nation.tbl': {
         type: 'csv',
         key: 'nation',
-        columns: [ 'nationkey', 'name', 'regionkey', 'comment' ],
+        columns: [
+            { name: 'nationkey', type: ColumnType.int },
+            { name: 'name', type: ColumnType.string },
+            { name: 'regionkey', type: ColumnType.int },
+            { name: 'comment', type: ColumnType.string },
+        ],
         csvOptions: {
             separator: '|',
-            cast: {
-                nationkey: Number,
-                regionkey: Number,
-            },
+            hasHeader: false,
         },
     },
     'orders.tbl': {
         type: 'csv',
         key: 'orders',
         columns: [
-            'orderkey',
-            'custkey',
-            'orderstatus',
-            'totalprice',
-            'orderdate',
-            'orderpriority',
-            'clerk',
-            'shippriority',
-            'comment',
+            { name: 'orderkey', type: ColumnType.int },
+            { name: 'custkey', type: ColumnType.int },
+            { name: 'orderstatus', type: ColumnType.string },
+            { name: 'totalprice', type: ColumnType.real },
+            { name: 'orderdate', type: ColumnType.date },
+            { name: 'orderpriority', type: ColumnType.string },
+            { name: 'clerk', type: ColumnType.string },
+            { name: 'shippriority', type: ColumnType.int },
+            { name: 'comment', type: ColumnType.string },
         ],
         csvOptions: {
             separator: '|',
-            cast: {
-                orderkey: Number,
-                custkey: Number,
-                totalprice: Number,
-                orderdate: d => new Date(d),
-                shippriority: Number,
-            },
+            hasHeader: false,
         },
     },
     'part.tbl': {
         type: 'csv',
         key: 'part',
         columns: [
-            'partkey',
-            'name',
-            'mfgr',
-            'brand',
-            'type',
-            'size',
-            'container',
-            'retailprice',
-            'comment',
+            { name: 'partkey', type: ColumnType.int },
+            { name: 'name', type: ColumnType.string },
+            { name: 'mfgr', type: ColumnType.string },
+            { name: 'brand', type: ColumnType.string },
+            { name: 'type', type: ColumnType.string },
+            { name: 'size', type: ColumnType.int },
+            { name: 'container', type: ColumnType.string },
+            { name: 'retailprice', type: ColumnType.real },
+            { name: 'comment', type: ColumnType.string },
         ],
         csvOptions: {
             separator: '|',
-            cast: {
-                partkey: Number,
-                size: Number,
-                retailprice: Number,
-            },
+            hasHeader: false,
         },
     },
     'partsupp.tbl': {
         type: 'csv',
         key: 'partsupp',
-        columns: [ 'partkey', 'suppkey', 'availqty', 'supplycost', 'comment' ],
+        columns: [
+            { name: 'partkey', type: ColumnType.int },
+            { name: 'suppkey', type: ColumnType.int },
+            { name: 'availqty', type: ColumnType.int },
+            { name: 'supplycost', type: ColumnType.real },
+            { name: 'comment', type: ColumnType.string },
+        ],
         csvOptions: {
             separator: '|',
-            cast: {
-                partkey: Number,
-                suppkey: Number,
-                availqty: Number,
-                supplycost: Number,
-            },
+            hasHeader: false,
         },
     },
     'region.tbl': {
         type: 'csv',
         key: 'region',
-        columns: [ 'regionkey', 'name', 'comment' ],
+        columns: [
+            { name: 'regionkey', type: ColumnType.int },
+            { name: 'name', type: ColumnType.string },
+            { name: 'comment', type: ColumnType.string },
+        ],
         csvOptions: {
             separator: '|',
-            cast: {
-                regionkey: Number,
-            },
+            hasHeader: false,
         },
     },
     'supplier.tbl': {
         type: 'csv',
         key: 'supplier',
         columns: [
-            'suppkey',
-            'name',
-            'address',
-            'nationkey',
-            'phone',
-            'acctbal',
-            'comment',
+            { name: 'suppkey', type: ColumnType.int },
+            { name: 'name', type: ColumnType.string },
+            { name: 'address', type: ColumnType.string },
+            { name: 'nationkey', type: ColumnType.int },
+            { name: 'phone', type: ColumnType.string },
+            { name: 'acctbal', type: ColumnType.real },
+            { name: 'comment', type: ColumnType.string },
         ],
         csvOptions: {
             separator: '|',
-            cast: {
-                suppkey: Number,
-                nationkey: Number,
-                acctbal: Number,
-            },
+            hasHeader: false,
         },
     },
+};
+
+export const tpchFile: InputZipFile = {
+    type: 'zip',
+    files: innerFiles,
 };

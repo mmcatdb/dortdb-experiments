@@ -1,9 +1,9 @@
 import { type Datasource } from './common';
-import { type UnibenchData, unibenchFiles, unibenchGraphTables } from './unibenchData';
+import { type UnibenchData, unibenchFile } from './unibenchData';
 import { MultiDirectedGraph } from 'graphology';
-import { extractArchive } from '../dataloaders/zip/zip-extractor';
-import { iterStream } from '../dataloaders/utils';
+import { streamWithProgress } from '../dataloaders/utils';
 import { type GraphologyGraph } from '@dortdb/lang-cypher';
+import { parseFile } from '../dataloaders/parsers/fileParser';
 
 const LS_KEY = 'indexeddb-used';
 const DB_NAME = 'unibench';
@@ -59,24 +59,22 @@ export class UnibenchService implements Datasource {
         return this.checkIndexedDB();
     }
 
-    public downloadData(): Promise<UnibenchData> {
+    public async downloadData(): Promise<UnibenchData> {
         // this.downloadProgress.set(0);
-        let bytesRead = 0;
-        const stream = async function* (this: UnibenchService) {
-            // const resp = await fetch('https://s3.eu-north-1.amazonaws.com/dortdb.unibench/Unibench-0.2.sample.zip');
-            const resp = await fetch('unibench.zip');
-            const rawData = new ArrayBuffer(+resp.headers.get('Content-Length')!);
-            const rawDataView = new Uint8Array(rawData);
-            for await (const chunk of iterStream(resp.body!)) {
-                rawDataView.set(chunk, bytesRead);
-                bytesRead += chunk.length;
-                console.log('progress', bytesRead / rawData.byteLength);
-                // this.downloadProgress.set(bytesRead / rawData.byteLength);
-                yield chunk;
-            }
-        }.bind(this)();
 
-        return this.processArchive(stream);
+        const response = await fetch('unibench.zip');
+        // const response = await fetch('unibench-full.zip');
+        const totalBytes = +response.headers.get('Content-Length')!;
+
+        const stream = response.body!.pipeThrough(streamWithProgress((bytesRead: number) => {
+            console.log('progress', bytesRead / totalBytes);
+            // this.downloadProgress.set(bytesRead / totalBytes);
+        }));
+
+        const result = (await parseFile(stream, unibenchFile)) as UnibenchData;
+        // this.data.set(result);
+
+        return result;
     }
 
     private async checkIndexedDB(): Promise<UnibenchData | undefined> {
@@ -149,16 +147,4 @@ export class UnibenchService implements Datasource {
         // this.dbPopulated.set(false);
     }
 
-    private async processArchive(archive: AsyncIterable<Uint8Array<ArrayBufferLike>>): Promise<UnibenchData> {
-        const result = (await extractArchive(
-            archive,
-            unibenchFiles,
-            new DOMParser(),
-            'socialNetwork',
-            unibenchGraphTables,
-        )) as UnibenchData;
-
-        // this.data.set(result);
-        return result;
-    }
 }

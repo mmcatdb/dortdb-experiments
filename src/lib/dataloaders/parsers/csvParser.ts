@@ -1,13 +1,23 @@
 import { type ColumnDef, ColumnType } from '@/types/data';
 import { parse, type parser } from 'csv/browser/esm';
+import { iterStream, toArray } from '../utils';
+import { type FileStream } from './fileParser';
 
-export type CSVParseOptions = {
+export async function parseCsv(input: FileStream, options: CsvParseOptions, columns: ColumnDef[]): Promise<CsvRow[]> {
+    const stream = input
+        .pipeThrough(new TextDecoderStream())
+        .pipeThrough(new CSVParser(columns, options));
+
+    return toArray(iterStream(stream));
+}
+
+export type CsvParseOptions = {
     separator: string;
     hasHeader: boolean;
 };
 
-export class CSVParser extends TransformStream<string, ParsedCsvRow> {
-    constructor(columns: ColumnDef[], options: CSVParseOptions) {
+class CSVParser extends TransformStream<string, CsvRow> {
+    constructor(columns: ColumnDef[], options: CsvParseOptions) {
         super(CSVParser.createTransformer({
             delimiter: options.separator,
             fromLine: options.hasHeader ? 2 : 1,
@@ -17,7 +27,7 @@ export class CSVParser extends TransformStream<string, ParsedCsvRow> {
         }));
     }
 
-    private static createTransformer(options?: parser.Options): Transformer<string, ParsedCsvRow> {
+    private static createTransformer(options?: parser.Options): Transformer<string, CsvRow> {
         const parser = parse({ columns: true, ...options });
         return {
             start(controller) {
@@ -45,11 +55,11 @@ export class CSVParser extends TransformStream<string, ParsedCsvRow> {
     }
 }
 
-export type ParsedCsvRow = Record<string, ParsedCsvValue>;
+export type CsvRow = Record<string, CsvValue>;
 
-export type ParsedCsvValue = string | number | Date | null;
+type CsvValue = string | number | Date | null;
 
-export type CastingFunction = (value: string, context: parser.CastingContext) => ParsedCsvValue;
+type CastingFunction = (value: string, context: parser.CastingContext) => CsvValue;
 
 function createCastFunction(columns: ColumnDef[]): CastingFunction {
     const columnMap = new Map(columns.map(col => [ col.name, col.type ]));
