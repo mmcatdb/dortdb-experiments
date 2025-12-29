@@ -25,6 +25,7 @@ export const DB_DATA: Record<string, TableData> = {
 export type ColumnDef = {
     name: string;
     type: ColumnType;
+    graphType?: 'from' | 'to';
 };
 
 export enum ColumnType {

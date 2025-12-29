@@ -1,8 +1,9 @@
-import { type ColumnDef } from '@/types/data';
+import { ColumnType, type ColumnDef } from '@/types/data';
 import { iterStream } from '../utils';
 import { createCsvStream, type CSVParseOptions } from './parse-csv-table';
 import { type StreamedEntry } from './zip-extractor';
 import { type MultiDirectedGraph } from 'graphology';
+import { type ParsedCsvRow } from '../csv-parser';
 
 /**
  * @param indexedTableNames - maps node types to table names
@@ -17,8 +18,16 @@ export async function csvToGraph(
     cachedIndices: Record<string, Map<string | number, Record<string, any>>> = {},
     dsPromises: Record<string, { promise: Promise<any[]> }> = {},
 ) {
+    const fromColumn = columns.find(col => col.graphType === 'from');
+    const toColumn = columns.find(col => col.graphType === 'to');
+    if (!fromColumn || !toColumn)
+        throw new Error('CSV to graph conversion requires "from" and "to" column definitions.');
+    if (fromColumn.type !== ColumnType.int || toColumn.type !== ColumnType.int)
+        throw new Error('CSV to graph conversion requires "from" and "to" columns to be of type int.');
+
+    const edgeProps = columns.filter(col => col.name !== fromColumn.name && col.name !== toColumn.name).map(col => col.name);
+
     const [ from, edgeType, to ] = entry.filename!.split('/').pop()!.split('_');
-    const stream = createCsvStream(entry, options, columns);
 
     const fromIndex = from in indexedTableNames
         ? await getTableIndex(indexedTableNames[from], dsPromises, cachedIndices)
@@ -27,38 +36,43 @@ export async function csvToGraph(
         ? await getTableIndex(indexedTableNames[to], dsPromises, cachedIndices)
         : null;
 
-    console.log(`Processing edges for ${from} -> ${to} (${edgeType})`);
-    const iter = iterStream(stream)[ Symbol.asyncIterator ]() as AsyncIterableIterator<any[]>;
-    const currentState = await iter.next();
-    console.log('current:', currentState.value);
-    const edgeProps = currentState.value.slice(2) as string[];
+    const stream = createCsvStream(entry, options, columns);
+    const iter = iterStream(stream)[ Symbol.asyncIterator ]();
+
     for await (const row of iter) {
-        const fromNode = from + row[0];
-        const toNode = to + row[1];
+        const rowFromId = row[fromColumn.name] as number;
+        const rowToId = row[toColumn.name] as number;
+
+        const fromNode = from + rowFromId;
+        const toNode = to + rowToId;
+
         if (fromIndex) {
             if (!graph.hasNode(fromNode)) {
-                const fromRow = fromIndex.get(row[0]) ?? { id: row[0] };
+                const fromRow = fromIndex.get(rowFromId) ?? { id: rowFromId };
                 fromRow['labels'] = [ from ];
                 graph.addNode(fromNode, fromRow);
             }
         }
         else {
-            graph.mergeNode(fromNode, { id: row[0], labels: [ from ] });
+            graph.mergeNode(fromNode, { id: rowFromId, labels: [ from ] });
         }
+
         if (toIndex) {
             if (!graph.hasNode(toNode)) {
-                const toRow = toIndex.get(row[1]) ?? { id: row[1] };
+                const toRow = toIndex.get(rowToId) ?? { id: rowToId };
                 toRow['labels'] = [ to ];
                 graph.addNode(toNode, toRow);
             }
         }
         else {
-            graph.mergeNode(toNode, { id: row[1], labels: [ to ] });
+            graph.mergeNode(toNode, { id: rowToId, labels: [ to ] });
         }
-        graph.addEdge(fromNode, toNode, {
-            type: edgeType,
-            ...Object.fromEntries(edgeProps.map((key, i) => [ key, row[2 + i] ])),
-        });
+
+        const edgeData: ParsedCsvRow = { type: edgeType };
+        for (const col of edgeProps)
+            edgeData[col] = row[col];
+
+        graph.addEdge(fromNode, toNode, edgeData);
     }
 }
 

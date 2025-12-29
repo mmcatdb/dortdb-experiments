@@ -123,8 +123,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
     'Dataset/SocialNetwork/person_hasInterest_tag_0_0.csv': {
         type: 'graph',
         columns: [
-            { name: 'Person.id', type: ColumnType.int },
-            { name: 'Tag.id', type: ColumnType.int },
+            { name: 'Person.id', type: ColumnType.int, graphType: 'from' },
+            { name: 'Tag.id', type: ColumnType.int, graphType: 'to' },
         ],
         csvOptions: {
             separator: '|',
@@ -134,8 +134,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
     'Dataset/SocialNetwork/person_knows_person_0_0.csv': {
         type: 'graph',
         columns: [
-            { name: 'from', type: ColumnType.int },
-            { name: 'to', type: ColumnType.int },
+            { name: 'from', type: ColumnType.int, graphType: 'from' },
+            { name: 'to', type: ColumnType.int, graphType: 'to' },
             { name: 'creationDate', type: ColumnType.date },
         ],
         csvOptions: {
@@ -146,8 +146,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
     'Dataset/SocialNetwork/post_hasCreator_person_0_0.csv': {
         type: 'graph',
         columns: [
-            { name: 'PostId', type: ColumnType.int },
-            { name: 'PersonId', type: ColumnType.int },
+            { name: 'PostId', type: ColumnType.int, graphType: 'from' },
+            { name: 'PersonId', type: ColumnType.int, graphType: 'to' },
         ],
         csvOptions: {
             separator: '|',
@@ -157,8 +157,8 @@ export const unibenchFilesTemp: Record<string, ExtractedFileOptions> = {
     'Dataset/SocialNetwork/post_hasTag_tag_0_0.csv': {
         type: 'graph',
         columns: [
-            { name: 'PostId', type: ColumnType.int },
-            { name: 'TagId', type: ColumnType.int },
+            { name: 'PostId', type: ColumnType.int, graphType: 'from' },
+            { name: 'TagId', type: ColumnType.int, graphType: 'to' },
         ],
         csvOptions: {
             separator: '|',
