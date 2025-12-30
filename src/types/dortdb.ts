@@ -1,7 +1,11 @@
 import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from './common';
-import { DortDB } from '@dortdb/core';
+import { datetime, DortDB } from '@dortdb/core';
 import { defaultRules } from '@dortdb/core/optimizer';
 import { SQL } from '@dortdb/lang-sql';
+import { Cypher } from '@dortdb/lang-cypher';
+import { XQuery } from '@dortdb/lang-xquery';
+
+export type DortdbLanguage = 'sql' | 'cypher' | 'xquery';
 
 export class Dortdb implements Database {
     readonly type = 'DortDB';
@@ -10,9 +14,14 @@ export class Dortdb implements Database {
     constructor() {
         this.innerDb = new DortDB({
             mainLang: SQL(),
+            additionalLangs: [
+                Cypher({ defaultGraph: 'defaultGraph' }),
+                XQuery(),
+            ],
             optimizer: {
                 rules: defaultRules,
             },
+            extensions: [ datetime ],
         });
     }
 
@@ -36,9 +45,13 @@ export class Dortdb implements Database {
         this.innerDb.registerSource([ tableName ], objects);
     }
 
-    query(sql: string): Result<SqlTuple[]> {
+    setRawData(tableName: string, data: unknown): void {
+        this.innerDb.registerSource([ tableName ], data);
+    }
+
+    query(sql: string, defaultLanguage?: DortdbLanguage): Result<SqlTuple[]> {
         try {
-            return successResult(this.innerDb.query<SqlTuple>(sql).data);
+            return successResult(this.innerDb.query<SqlTuple>(sql, defaultLanguage && { mainLang: defaultLanguage }).data);
         }
         catch (error) {
             return errorResult(error);

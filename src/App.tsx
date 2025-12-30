@@ -14,6 +14,8 @@ setupDatabase(sqljs);
 const alasql = new Alasql();
 setupDatabase(alasql);
 
+const dbs = [ dortdb ];
+
 export function App() {
     return (<>
         <div className='mx-auto max-w-6xl py-12 space-y-8'>
@@ -23,7 +25,7 @@ export function App() {
 
             <DatabaseDisplay db={alasql} />
 
-            <DatasourceLoader />
+            <DatasourceLoader dbs={dbs} />
         </div>
     </>);
 }

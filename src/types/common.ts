@@ -12,6 +12,8 @@ export type Database = {
      */
     setData(tableName: string, data: TableData): void;
 
+    setRawData?(tableName: string, data: unknown): void;
+
     query(sql: string): Result<SqlTuple[]>;
 };
 

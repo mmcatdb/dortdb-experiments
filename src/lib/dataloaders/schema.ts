@@ -1,15 +1,23 @@
 import { type ColumnDef } from '@/types/data';
-import { type CsvParseOptions } from './parsers/csvParser';
+import { type CsvRow, type CsvParseOptions } from './parsers/csvParser';
 
-export type InputFile = InputDataFile | InputZipFile;
-
-export type InputZipFile = {
-    type: 'zip';
-    // No nested zip files for now.
-    files: Record<string, InputDataFile>;
+export type DatasourceSchema = {
+    // TODO
+    file: FileSchema;
+    kinds: KindSchema[];
 };
 
-export type InputDataFile = {
+export type FileSchema = SimpleFileSchema | ZipFileSchema;
+
+export type ZipFileSchema = {
+    path: string;
+    type: 'zip';
+    // No nested zip files for now.
+    files: SimpleFileSchema[];
+};
+
+export type SimpleFileSchema = {
+    path: string;
     key: string;
 } & ({
     type: 'csv';
@@ -19,11 +27,43 @@ export type InputDataFile = {
     type: 'ndjson' | 'xml';
 });
 
-export type DatasourceSchema = {
-    tables: Record<string, TableSchema>;
-    graphs: Record<string, TableSchema>;
-};
+export type ParsedFileData = Record<string, ParsedSimpleFileData>;
+export type ParsedSimpleFileData = Document | CsvRow[] | string[][];
+
+export type KindSchema = TableSchema | GraphSchema | DocumentSchema;
 
 export type TableSchema = {
-    columns: ColumnDef[];
+    type: 'table';
+    key: string;
+    // TODO Not needed for now
+    // columns: string[];
+};
+
+export type GraphSchema = {
+    type: 'graph';
+    key: string;
+    edges: EdgeSchema[];
+};
+
+export type EdgeSchema = {
+    key: string;
+    props: string[];
+    from: NodeSchema;
+    to: NodeSchema;
+};
+
+type NodeSchema = {
+    idColumn: string;
+    label: string;
+    source?: NodeSource;
+};
+
+type NodeSource = {
+    key: string;
+    column: string;
+};
+
+export type DocumentSchema = {
+    type: 'document';
+    key: string;
 };

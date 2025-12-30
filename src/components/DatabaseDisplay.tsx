@@ -1,8 +1,9 @@
-import { useId, useMemo, useState } from 'react';
+import { type Dispatch, useId, useState } from 'react';
 import type { Database } from '../types/common';
-import { Button, Textarea } from './shadcn';
+import { Button, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
 import { Label } from './shadcn/label';
 import { cn } from './shadcn/utils';
+import { Dortdb, type DortdbLanguage } from '@/types/dortdb';
 
 type DatabaseDisplayProps = {
     db: Database;
@@ -11,15 +12,35 @@ type DatabaseDisplayProps = {
 
 export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
     const [ query, setQuery ] = useState(`SELECT * FROM hello WHERE a = 1 AND b = 'world'`);
-    const [ executedQuery, setExecutedQuery ] = useState<string>();
+    const [ defaultLanguage, setDefaultLanguage ] = useState<DortdbLanguage>('sql');
 
-    const result = useMemo(() => executedQuery && db.query(executedQuery), [ db, executedQuery ]);
+    const [ isExecuting, setIsExecuting ] = useState(false);
+    const [ result, setResult ] = useState<ReturnType<Database['query']>>();
 
-    function run() {
-        setExecutedQuery(query);
+    async function executeQuery() {
+        if (!query.trim()) {
+            console.log('Empty query, skipping execution.');
+            setResult(undefined);
+            return;
+        }
+
+        setIsExecuting(true);
+        // TODO It would be really nice to do this truly async, e.g., in a web worker.
+        const output = await new Promise<ReturnType<Database['query']>>(resolve => setTimeout(() => {
+            const innerOutput = db instanceof Dortdb ? db.query(query, defaultLanguage) : db.query(query);
+            resolve(innerOutput);
+        }));
+        setIsExecuting(false);
+        setResult(output);
+
+        if (output.status)
+            console.log(`Success: ${output.data.length} rows`, output.data);
+        else
+            console.log('Error:', output.error);
     }
 
     const queryId = useId();
+    const defaultLanguageId = useId();
 
     return (
         <div className={className}>
@@ -33,11 +54,23 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => {
                     if (e.key === 'Enter' && e.ctrlKey)
-                        run();
+                        executeQuery();
                 }}
             />
 
-            <Button className='mt-2' variant='outline' onClick={run}>Execute</Button>
+            {db.type === 'DortDB' && (<>
+                <Label className='mt-2'>Default Language:</Label>
+                <RadioGroup defaultValue={defaultLanguage} onValueChange={setDefaultLanguage as Dispatch<string>} className='mt-2 flex gap-6'>
+                    {languages.map(language => (
+                        <div key={language} className='flex items-center gap-3'>
+                            <RadioGroupItem id={defaultLanguageId + language} value={language} />
+                            <Label htmlFor={defaultLanguageId + language}>{language}</Label>
+                        </div>
+                    ))}
+                </RadioGroup>
+            </>)}
+
+            <Button className='mt-2' variant='outline' onClick={executeQuery} disabled={isExecuting}>Execute</Button>
 
             {result && (
                 <div className='mt-2'>
@@ -48,6 +81,8 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
         </div>
     );
 }
+
+const languages: DortdbLanguage[] = [ 'sql', 'cypher', 'xquery' ];
 
 function errorToString(error: unknown): string {
     if (error instanceof Error)
