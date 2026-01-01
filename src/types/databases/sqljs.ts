@@ -1,4 +1,4 @@
-import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from './common';
+import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from '../database';
 import initSqlJs from 'sql.js';
 
 const SQL = await initSqlJs({
@@ -54,5 +54,9 @@ export class Sqljs implements Database {
         catch (error) {
             return errorResult(error);
         }
+    }
+
+    getDefaultQuery(): string {
+        return 'SELECT * FROM hello WHERE a = 1 AND b = \'world\'';
     }
 }

@@ -11,7 +11,7 @@ export async function parseZip(stream: FileStream, innerFiles: SimpleFileSchema[
     const fileMap = new Map(innerFiles.map(f => [ f.path, f ]));
 
     const promises: { key: string, promise: Promise<ParsedSimpleFileData> }[] = [];
-    const unzipped = stream!.pipeThrough(new zip.ZipReaderStream());
+    const unzipped = stream.pipeThrough(new zip.ZipReaderStream());
 
     // There was a change in ArrayBuffer (https://devblogs.microsoft.com/typescript/announcing-typescript-5-9-rc/#notable-behavioral-changes) which is not yet reflected in @zip.js types.
     for await (const entry of iterStream(unzipped as ReadableStream<StreamedEntry>)) {

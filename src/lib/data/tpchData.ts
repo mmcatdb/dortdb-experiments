@@ -1,4 +1,4 @@
-import { type SqlValue } from '@/types/common';
+import { type SqlValue } from '@/types/database';
 import { type DatasourceSchema, type SimpleFileSchema } from '../dataloaders/schema';
 import { ColumnType } from '@/types/data';
 

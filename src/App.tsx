@@ -1,12 +1,11 @@
-import { Dortdb } from './types/dortdb';
+import { Dortdb } from './types/databases/dortdb';
 import { setupDatabase } from './types/data';
 import { DatabaseDisplay } from './components/DatabaseDisplay';
-import { Sqljs } from './types/sqljs';
-import { Alasql } from './types/alasql';
+import { Sqljs } from './types/databases/sqljs';
+import { Alasql } from './types/databases/alasql';
 import { DatasourceLoader } from './components/DatasourceLoader';
 
 const dortdb = new Dortdb();
-setupDatabase(dortdb);
 
 const sqljs = new Sqljs();
 setupDatabase(sqljs);

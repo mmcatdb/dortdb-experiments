@@ -1,4 +1,4 @@
-import { type Result, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from './common';
+import { type Result, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from '../database';
 import alasqlRaw from 'alasql';
 
 // This is ugly but alasql uses commonjs modules and interface augmentation doesn't work.
@@ -58,5 +58,9 @@ export class Alasql implements Database {
         catch (error) {
             return errorResult(error);
         }
+    }
+
+    getDefaultQuery(): string {
+        return 'SELECT * FROM hello WHERE a = 1 AND b = \'world\'';
     }
 }

@@ -1,4 +1,4 @@
-import { type SqlTuple } from '@/types/common';
+import { type SqlTuple } from '@/types/database';
 import { ColumnType } from '@/types/data';
 import { type GraphologyGraph } from '@dortdb/lang-cypher';
 import { type SimpleFileSchema, type DatasourceSchema } from '../dataloaders/schema';
@@ -109,7 +109,8 @@ const innerFiles: SimpleFileSchema[] = [ {
 }, {
     path: 'Dataset/Invoice/Invoice.xml',
     type: 'xml',
-    key: 'invoices',
+    // This is not typo, this kind should be uppercased.
+    key: 'Invoices',
 }, {
     path: 'Dataset/Order/Order.json',
     type: 'ndjson',
@@ -192,7 +193,7 @@ export const unibenchSchema: DatasourceSchema = {
         key: 'posts',
     }, {
         type: 'document',
-        key: 'invoices',
+        key: 'Invoices',
     }, {
         type: 'document',
         key: 'orders',
@@ -204,24 +205,24 @@ export const unibenchSchema: DatasourceSchema = {
             props: [],
             from: {
                 idColumn: 'Person.id',
-                label: 'customers',
+                label: 'person',
                 source: { key: 'customers', column: 'id' },
             },
             to: {
                 idColumn: 'Tag.id',
-                label: 'tags',
+                label: 'tag',
             },
         }, {
             key: 'knows',
             props: [ 'creationDate' ],
             from: {
                 idColumn: 'from',
-                label: 'customers',
+                label: 'person',
                 source: { key: 'customers', column: 'id' },
             },
             to: {
                 idColumn: 'to',
-                label: 'customers',
+                label: 'person',
                 source: { key: 'customers', column: 'id' },
             },
         }, {
@@ -229,12 +230,12 @@ export const unibenchSchema: DatasourceSchema = {
             props: [],
             from: {
                 idColumn: 'PostId',
-                label: 'posts',
+                label: 'post',
                 source: { key: 'posts', column: 'id' },
             },
             to: {
                 idColumn: 'PersonId',
-                label: 'customers',
+                label: 'person',
                 source: { key: 'customers', column: 'id' },
             },
         }, {
@@ -242,12 +243,12 @@ export const unibenchSchema: DatasourceSchema = {
             props: [],
             from: {
                 idColumn: 'PostId',
-                label: 'posts',
+                label: 'post',
                 source: { key: 'posts', column: 'id'  },
             },
             to: {
                 idColumn: 'TagId',
-                label: 'tags',
+                label: 'tag',
             },
         } ],
     } ],

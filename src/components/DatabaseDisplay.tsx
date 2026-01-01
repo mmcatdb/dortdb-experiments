@@ -1,9 +1,10 @@
 import { type Dispatch, useId, useState } from 'react';
-import type { Database } from '../types/common';
+import type { Database, DortdbLanguage, ExampleQuery } from '../types/database';
 import { Button, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
 import { Label } from './shadcn/label';
 import { cn } from './shadcn/utils';
-import { Dortdb, type DortdbLanguage } from '@/types/dortdb';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './shadcn/dropdown-menu';
+import { ChevronDownIcon } from 'lucide-react';
 
 type DatabaseDisplayProps = {
     db: Database;
@@ -11,7 +12,7 @@ type DatabaseDisplayProps = {
 };
 
 export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
-    const [ query, setQuery ] = useState(`SELECT * FROM hello WHERE a = 1 AND b = 'world'`);
+    const [ query, setQuery ] = useState(db.getDefaultQuery());
     const [ defaultLanguage, setDefaultLanguage ] = useState<DortdbLanguage>('sql');
 
     const [ isExecuting, setIsExecuting ] = useState(false);
@@ -24,23 +25,32 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
             return;
         }
 
+        console.log('Executing query on db:', db);
+
         setIsExecuting(true);
         // TODO It would be really nice to do this truly async, e.g., in a web worker.
         const output = await new Promise<ReturnType<Database['query']>>(resolve => setTimeout(() => {
-            const innerOutput = db instanceof Dortdb ? db.query(query, defaultLanguage) : db.query(query);
+            const innerOutput = db.query(query, defaultLanguage);
             resolve(innerOutput);
         }));
         setIsExecuting(false);
         setResult(output);
 
         if (output.status)
-            console.log(`Success: ${output.data.length} rows`, output.data);
+            console.log(`Query success: ${output.data.length} rows`, output.data);
         else
-            console.log('Error:', output.error);
+            console.log('Query error:', output.error);
+    }
+
+    function selectExample({ query, defaultLanguage }: ExampleQuery) {
+        setQuery(query);
+        if (defaultLanguage)
+            setDefaultLanguage(defaultLanguage);
     }
 
     const queryId = useId();
     const defaultLanguageId = useId();
+    const examples = db.getExamples?.();
 
     return (
         <div className={className}>
@@ -60,7 +70,7 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
 
             {db.type === 'DortDB' && (<>
                 <Label className='mt-2'>Default Language:</Label>
-                <RadioGroup defaultValue={defaultLanguage} onValueChange={setDefaultLanguage as Dispatch<string>} className='mt-2 flex gap-6'>
+                <RadioGroup value={defaultLanguage} onValueChange={setDefaultLanguage as Dispatch<string>} className='mt-2 flex gap-6'>
                     {languages.map(language => (
                         <div key={language} className='flex items-center gap-3'>
                             <RadioGroupItem id={defaultLanguageId + language} value={language} />
@@ -70,7 +80,13 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
                 </RadioGroup>
             </>)}
 
-            <Button className='mt-2' variant='outline' onClick={executeQuery} disabled={isExecuting}>Execute</Button>
+            <div className='mt-2 flex items-center gap-2'>
+                <Button variant='outline' onClick={executeQuery} disabled={isExecuting}>Execute</Button>
+
+                {examples && (
+                    <ExampleSelect options={examples} onSelect={selectExample} />
+                )}
+            </div>
 
             {result && (
                 <div className='mt-2'>
@@ -89,4 +105,28 @@ function errorToString(error: unknown): string {
         return error.message;
 
     return JSON.stringify(error, null, 4);
+}
+
+type ExampleSelectProps = {
+    options: ExampleQuery[];
+    onSelect: Dispatch<ExampleQuery>;
+};
+
+function ExampleSelect({ options, onSelect }: ExampleSelectProps) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant='outline'>
+                    Example <ChevronDownIcon size={16} />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                {options.map(example => (
+                    <DropdownMenuItem key={example.name} onClick={() => onSelect(example)}>
+                        {example.name}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
 }

@@ -14,7 +14,19 @@ export type Database = {
 
     setRawData?(tableName: string, data: unknown): void;
 
-    query(sql: string): Result<SqlTuple[]>;
+    query(sql: string, defaultLanguage?: DortdbLanguage): Result<SqlTuple[]>;
+
+    getDefaultQuery(): string;
+
+    getExamples?(): ExampleQuery[];
+};
+
+export type DortdbLanguage = 'sql' | 'cypher' | 'xquery';
+
+export type ExampleQuery = {
+    name: string;
+    query: string;
+    defaultLanguage?: DortdbLanguage;
 };
 
 export type SqlValue = number | string | Uint8Array | null;

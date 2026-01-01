@@ -1,4 +1,4 @@
-import type { Database, TableData, TableSchema } from './common';
+import type { Database, TableData, TableSchema } from './database';
 
 export function setupDatabase(db: Database) {
     db.setSchema(DB_SCHEMA);

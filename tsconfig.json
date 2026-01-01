@@ -33,10 +33,13 @@
         // "noUnusedParameters": true,
         "forceConsistentCasingInFileNames": true,
 
-        "baseUrl": ".",
         "paths": {
             "@/*": [ "./src/*" ]
-        }
+        },
     },
-    "include": [ "src" ]
+    "include": [
+        "src",
+        "*.config.ts",
+        "*.config.js",
+    ],
 }

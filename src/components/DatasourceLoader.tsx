@@ -1,7 +1,7 @@
 import { Button } from './shadcn';
 import { loadDatasource } from '@/lib/dataloaders/datasource';
 import { unibenchSchema } from '@/lib/data/unibenchData';
-import { type Database } from '@/types/common';
+import { type Database } from '@/types/database';
 import { useState } from 'react';
 import { CheckIcon } from 'lucide-react';
 
