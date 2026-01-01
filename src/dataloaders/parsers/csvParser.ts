@@ -1,4 +1,4 @@
-import { type ColumnDef, ColumnType } from '@/types/data';
+import { type ColumnDef, ColumnType, type CsvParseOptions, type CsvRow, type CsvValue } from '@/types/schema';
 import { parse, type parser } from 'csv/browser/esm';
 import { iterStream, toArray } from '../utils';
 import { type FileStream } from './fileParser';
@@ -10,11 +10,6 @@ export async function parseCsv(input: FileStream, options: CsvParseOptions, colu
 
     return toArray(iterStream(stream));
 }
-
-export type CsvParseOptions = {
-    separator: string;
-    hasHeader: boolean;
-};
 
 class CSVParser extends TransformStream<string, CsvRow> {
     constructor(columns: ColumnDef[], options: CsvParseOptions) {
@@ -55,10 +50,6 @@ class CSVParser extends TransformStream<string, CsvRow> {
     }
 }
 
-export type CsvRow = Record<string, CsvValue>;
-
-type CsvValue = string | number | Date | null;
-
 type CastingFunction = (value: string, context: parser.CastingContext) => CsvValue;
 
 function createCastFunction(columns: ColumnDef[]): CastingFunction {
@@ -77,7 +68,7 @@ function createCastFunction(columns: ColumnDef[]): CastingFunction {
 
         switch (type) {
         case ColumnType.int:
-        case ColumnType.real:
+        case ColumnType.float:
             return Number(value);
         case ColumnType.date:
             return new Date(value);

@@ -1,6 +1,6 @@
 import * as zip from '@zip.js/zip.js';
 import { iterStream } from '../utils';
-import { type ParsedSimpleFileData, type ParsedFileData, type SimpleFileSchema } from '../schema';
+import { type ParsedSimpleFileData, type ParsedFileData, type SimpleFileSchema } from '@/types/schema';
 import { type FileStream, parseSimpleFile } from './fileParser';
 
 export type StreamedEntry = Omit<zip.Entry, 'getData'> & {

@@ -1,7 +1,6 @@
 import { type SqlTuple } from '@/types/database';
-import { ColumnType } from '@/types/data';
 import { type GraphologyGraph } from '@dortdb/lang-cypher';
-import { type SimpleFileSchema, type DatasourceSchema } from '../dataloaders/schema';
+import { type SimpleFileSchema, type DatasourceSchema, ColumnType } from '@/types/schema';
 
 export type UnibenchData = {
     customers: SqlTuple[];
@@ -66,7 +65,7 @@ const innerFiles: SimpleFileSchema[] = [ {
     columns: [
         { name: 'asin', type: ColumnType.string },
         { name: 'title', type: ColumnType.string },
-        { name: 'price', type: ColumnType.real },
+        { name: 'price', type: ColumnType.float },
         { name: 'imgUrl', type: ColumnType.string },
         { name: 'productId', type: ColumnType.int },
         { name: 'brand', type: ColumnType.int },

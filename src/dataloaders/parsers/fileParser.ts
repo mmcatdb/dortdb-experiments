@@ -1,7 +1,7 @@
 import { parseCsv } from './csvParser';
 import { parseDocument } from './documentParser';
 import { parseNdjson } from './ndjsonParser';
-import { type SimpleFileSchema, type FileSchema, type ParsedFileData, type ParsedSimpleFileData } from '../schema';
+import { type SimpleFileSchema, type FileSchema, type ParsedFileData, type ParsedSimpleFileData } from '@/types/schema';
 import { parseZip } from './zipParser';
 
 export type FileStream = ReadableStream<Uint8Array<ArrayBuffer>>;

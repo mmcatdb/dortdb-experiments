@@ -1,6 +1,5 @@
 import { MultiDirectedGraph } from 'graphology';
-import { type CsvRow } from '../parsers/csvParser';
-import { type GraphSchema, type EdgeSchema, type ParsedFileData } from '../schema';
+import { type GraphSchema, type EdgeSchema, type ParsedFileData, type CsvRow } from '@/types/schema';
 
 export function convertCsvToGraph(input: ParsedFileData, schema: GraphSchema): MultiDirectedGraph {
     const graph = new MultiDirectedGraph();

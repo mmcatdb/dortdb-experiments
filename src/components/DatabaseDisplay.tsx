@@ -1,9 +1,7 @@
 import { type Dispatch, useId, useState } from 'react';
-import type { Database, DortdbLanguage, ExampleQuery } from '../types/database';
-import { Button, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
-import { Label } from './shadcn/label';
-import { cn } from './shadcn/utils';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './shadcn/dropdown-menu';
+import type { Database, DortdbLanguage, ExampleQuery } from '@/types/database';
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
+import { cn } from './utils';
 import { ChevronDownIcon } from 'lucide-react';
 
 type DatabaseDisplayProps = {

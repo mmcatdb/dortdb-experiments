@@ -1,4 +1,4 @@
-import { ColumnType } from './data';
+import { ColumnType } from '@/types/schema';
 
 /** Called *Type Affinity* in the docs. All other "types" are cast to one of these. */
 export enum SqliteColumnType {
@@ -15,7 +15,7 @@ export function columnTypeToSqlite(type: ColumnType): SqliteColumnType {
         return SqliteColumnType.text;
     case ColumnType.int:
         return SqliteColumnType.integer;
-    case ColumnType.real:
+    case ColumnType.float:
         return SqliteColumnType.real;
     case ColumnType.date:
         return SqliteColumnType.text;

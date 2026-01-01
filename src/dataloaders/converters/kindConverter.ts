@@ -1,4 +1,4 @@
-import { type KindSchema, type ParsedFileData } from '../schema';
+import { type KindSchema, type ParsedFileData } from '@/types/schema';
 import { convertCsvToGraph } from './csvToGraphConverter';
 
 export function convertKinds(data: ParsedFileData, kinds: KindSchema[]): Record<string, unknown> {

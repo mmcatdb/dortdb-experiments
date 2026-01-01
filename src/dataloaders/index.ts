@@ -1,6 +1,6 @@
 import { convertKinds } from './converters/kindConverter';
 import { parseFile } from './parsers/fileParser';
-import { type DatasourceSchema } from './schema';
+import { type DatasourceSchema } from '@/types/schema';
 import { streamWithProgress } from './utils';
 
 export async function loadDatasource<TData>(schema: DatasourceSchema, onProgress?: (progress: number) => void): Promise<TData> {

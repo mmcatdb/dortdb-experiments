@@ -1,11 +1,10 @@
-import { type ColumnDef } from '@/types/data';
-import { type CsvRow, type CsvParseOptions } from './parsers/csvParser';
-
 export type DatasourceSchema = {
     // TODO
     file: FileSchema;
     kinds: KindSchema[];
 };
+
+// #region Files
 
 export type FileSchema = SimpleFileSchema | ZipFileSchema;
 
@@ -27,8 +26,33 @@ export type SimpleFileSchema = {
     type: 'ndjson' | 'xml';
 });
 
+export type CsvParseOptions = {
+    separator: string;
+    hasHeader: boolean;
+};
+
+export type CsvRow = Record<string, CsvValue>;
+
+export type CsvValue = string | number | Date | null;
+
+export type ColumnDef = {
+    name: string;
+    type: ColumnType;
+    graphType?: 'from' | 'to';
+};
+
+export enum ColumnType {
+    string = 'string',
+    int = 'int',
+    float = 'float',
+    date = 'date',
+}
+
 export type ParsedFileData = Record<string, ParsedSimpleFileData>;
 export type ParsedSimpleFileData = Document | CsvRow[] | string[][];
+
+// #endregion
+// #region Kinds
 
 export type KindSchema = TableSchema | GraphSchema | DocumentSchema;
 
@@ -67,3 +91,5 @@ export type DocumentSchema = {
     type: 'document';
     key: string;
 };
+
+// #endregion

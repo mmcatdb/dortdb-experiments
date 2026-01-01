@@ -1,6 +1,5 @@
 import { type SqlValue } from '@/types/database';
-import { type DatasourceSchema, type SimpleFileSchema } from '../dataloaders/schema';
-import { ColumnType } from '@/types/data';
+import { ColumnType, type DatasourceSchema, type SimpleFileSchema } from '@/types/schema';
 
 export type TpchData = {
     customer: SqlValue[];
@@ -24,7 +23,7 @@ const innerFiles: SimpleFileSchema[] = [ {
         { name: 'address', type: ColumnType.string },
         { name: 'nationkey', type: ColumnType.int },
         { name: 'phone', type: ColumnType.string },
-        { name: 'acctbal', type: ColumnType.real },
+        { name: 'acctbal', type: ColumnType.float },
         { name: 'mktsegment', type: ColumnType.string },
         { name: 'comment', type: ColumnType.string },
     ],
@@ -42,10 +41,10 @@ const innerFiles: SimpleFileSchema[] = [ {
         { name: 'partkey', type: ColumnType.int },
         { name: 'suppkey', type: ColumnType.int },
         { name: 'linenumber', type: ColumnType.int },
-        { name: 'quantity', type: ColumnType.real },
-        { name: 'extendedprice', type: ColumnType.real },
-        { name: 'discount', type: ColumnType.real },
-        { name: 'tax', type: ColumnType.real },
+        { name: 'quantity', type: ColumnType.float },
+        { name: 'extendedprice', type: ColumnType.float },
+        { name: 'discount', type: ColumnType.float },
+        { name: 'tax', type: ColumnType.float },
         { name: 'returnflag', type: ColumnType.string },
         { name: 'linestatus', type: ColumnType.string },
         { name: 'shipdate', type: ColumnType.date },
@@ -81,7 +80,7 @@ const innerFiles: SimpleFileSchema[] = [ {
         { name: 'orderkey', type: ColumnType.int },
         { name: 'custkey', type: ColumnType.int },
         { name: 'orderstatus', type: ColumnType.string },
-        { name: 'totalprice', type: ColumnType.real },
+        { name: 'totalprice', type: ColumnType.float },
         { name: 'orderdate', type: ColumnType.date },
         { name: 'orderpriority', type: ColumnType.string },
         { name: 'clerk', type: ColumnType.string },
@@ -104,7 +103,7 @@ const innerFiles: SimpleFileSchema[] = [ {
         { name: 'type', type: ColumnType.string },
         { name: 'size', type: ColumnType.int },
         { name: 'container', type: ColumnType.string },
-        { name: 'retailprice', type: ColumnType.real },
+        { name: 'retailprice', type: ColumnType.float },
         { name: 'comment', type: ColumnType.string },
     ],
     csvOptions: {
@@ -119,7 +118,7 @@ const innerFiles: SimpleFileSchema[] = [ {
         { name: 'partkey', type: ColumnType.int },
         { name: 'suppkey', type: ColumnType.int },
         { name: 'availqty', type: ColumnType.int },
-        { name: 'supplycost', type: ColumnType.real },
+        { name: 'supplycost', type: ColumnType.float },
         { name: 'comment', type: ColumnType.string },
     ],
     csvOptions: {
@@ -149,7 +148,7 @@ const innerFiles: SimpleFileSchema[] = [ {
         { name: 'address', type: ColumnType.string },
         { name: 'nationkey', type: ColumnType.int },
         { name: 'phone', type: ColumnType.string },
-        { name: 'acctbal', type: ColumnType.real },
+        { name: 'acctbal', type: ColumnType.float },
         { name: 'comment', type: ColumnType.string },
     ],
     csvOptions: {

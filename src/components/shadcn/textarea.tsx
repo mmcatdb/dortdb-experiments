@@ -1,6 +1,6 @@
 import TextareaAutosize, { type TextareaAutosizeProps } from 'react-textarea-autosize';
 
-import { cn } from '@/components/shadcn/utils';
+import { cn } from '@/components/utils';
 
 function Textarea({ className, ...props }: TextareaAutosizeProps) {
     return (
