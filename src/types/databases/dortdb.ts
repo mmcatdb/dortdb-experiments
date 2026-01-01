@@ -1,9 +1,10 @@
-import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult, type ExampleQuery, type DortdbLanguage } from '../database';
+import { type Result, successResult, type Database, type SqlTuple, errorResult, type ExampleQuery, type DortdbLanguage } from '../database';
 import { datetime, DortDB } from '@dortdb/core';
 import { defaultRules } from '@dortdb/core/optimizer';
 import { SQL } from '@dortdb/lang-sql';
 import { Cypher } from '@dortdb/lang-cypher';
 import { XQuery } from '@dortdb/lang-xquery';
+import { type DatasourceData, type DatasourceSchema } from '../schema';
 
 export class Dortdb implements Database {
     readonly type = 'DortDB';
@@ -23,24 +24,16 @@ export class Dortdb implements Database {
         });
     }
 
-    private schema: TableSchema[] | undefined;
+    setData(schema: DatasourceSchema, data: DatasourceData): void {
+        const tables = [ ...schema.common, ...schema.multimodelOnly ];
 
-    setSchema(schema: TableSchema[]): void {
-        // For DortDB, schema is inferred from the queries, so no action is needed here.
-        // However, we need it to create indexes later.
-        this.schema = schema;
-    }
+        for (const table of tables) {
+            const tableData = data.multimodel[table.key];
+            if (!tableData)
+                throw new Error(`No data found for table "${table.key}".`);
 
-    setData(tableName: string, data: TableData): void {
-        const tableSchema = this.schema?.find(t => t.name === tableName);
-        if (!tableSchema)
-            throw new Error('Schema for table ' + tableName + ' not found.');
-
-        const columns = tableSchema.columns.map(column => column.name);
-
-        const objects = rowsToObjects(columns, data);
-
-        this.innerDb.registerSource([ tableName ], objects);
+            this.innerDb.registerSource([ table.key ], tableData);
+        }
     }
 
     setRawData(tableName: string, data: unknown): void {
@@ -157,7 +150,7 @@ RETURN foaf
 MATCH (:person {id: 4659})-[:knows]->(person)<-[:hasCreator]-()-[:hasTag]->(tag)
 WHERE EXISTS {
   LANG xquery
-  $Invoices/Invoices/Invoice.xml[PersonId=$person/@id]/Orderline[brand="Reebok"]
+  $invoices/Invoices/Invoice.xml[PersonId=$person/@id]/Orderline[brand="Reebok"]
 }
 RETURN DISTINCT tag.id
   `,
@@ -177,7 +170,7 @@ SELECT x.value AS productId FROM (
     UNWIND edges AS edge
     UNWIND edge AS person
     RETURN DISTINCT person.id
-  ), $productId in $Invoices/Invoices/Invoice.xml[PersonId=$interPerson]//productId
+  ), $productId in $invoices/Invoices/Invoice.xml[PersonId=$interPerson]//productId
   group by $num := number($productId)
   order by fn:count($productId) descending
   return $num
@@ -196,10 +189,10 @@ JOIN brandProducts ON brandProducts.productAsin = feedback.productAsin
 WHERE brandProducts.brandName = 'Reebok' AND feedback.feedback[1]::number < 4 AND (
   LANG xquery
   let $now := date('2024-12-31') (: the data is static :)
-  let $recent := $Invoices/Invoices/Invoice.xml[
+  let $recent := $invoices/Invoices/Invoice.xml[
     date(OrderDate) gt date:sub($now, interval('6 months'))
   ][Orderline/asin = $brandProducts.productAsin]
-  let $old := $Invoices/Invoices/Invoice.xml[
+  let $old := $invoices/Invoices/Invoice.xml[
     date(OrderDate) le date:sub($now, interval('6 months')) and
     date(OrderDate) gt date:sub($now, interval('12 months'))
   ][Orderline/asin = $brandProducts.productAsin]
@@ -236,7 +229,7 @@ FROM (
   )
 
   for $pid in $categoryProducts
-  let $soldProducts := $Invoices/Invoices/Invoice.xml[
+  let $soldProducts := $invoices/Invoices/Invoice.xml[
     date(OrderDate) gt $yrAgo
   ]/Orderline[productId eq $pid],
   $relatedPosts := (
@@ -288,7 +281,7 @@ FROM (
     vendors.id,
     (
       LANG xquery
-      let $sales := $Invoices/Invoices/Invoice.xml/Orderline[brand = $vendors:id]
+      let $sales := $invoices/Invoices/Invoice.xml/Orderline[brand = $vendors:id]
       return fn:count($sales)
     ) sales
   FROM vendors

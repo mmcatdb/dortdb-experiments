@@ -1,18 +1,6 @@
-import { type SqlValue } from '@/types/database';
 import { ColumnType, type DatasourceSchema, type SimpleFileSchema } from '@/types/schema';
 
-export type TpchData = {
-    customer: SqlValue[];
-    lineitem: SqlValue[];
-    nation: SqlValue[];
-    orders: SqlValue[];
-    part: SqlValue[];
-    partsupp: SqlValue[];
-    region: SqlValue[];
-    supplier: SqlValue[];
-};
-
-const innerFiles: SimpleFileSchema[] = [ {
+const files: SimpleFileSchema[] = [ {
     path: 'customer.tbl',
     type: 'csv',
     key: 'customer',
@@ -157,14 +145,21 @@ const innerFiles: SimpleFileSchema[] = [ {
     },
 } ];
 
-export const tpchSchema: DatasourceSchema = {
+export const tpch: DatasourceSchema = {
+    label: 'TPC-H',
     file: {
         // TODO The file doesn't exist yet ...
         path: 'https://data.mmcatdb.com/tpch.zip',
         type: 'zip',
-        files: innerFiles,
+        files,
     },
-    kinds: [
+    common: [
+        // TODO
+    ],
+    relationalOnly: [
+        // TODO
+    ],
+    multimodelOnly: [
         // TODO
     ],
 };

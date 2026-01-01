@@ -1,7 +1,8 @@
+import { type JsonObject } from '@/types/schema';
 import { iterStream, toArray } from '../utils';
 import { type FileStream } from './fileParser';
 
-export async function parseNdjson(input: FileStream): Promise<string[][]> {
+export async function parseNdjson(input: FileStream): Promise<JsonObject[]> {
     const stream = input
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new NDJSONParser());
@@ -9,12 +10,12 @@ export async function parseNdjson(input: FileStream): Promise<string[][]> {
     return toArray(iterStream(stream));
 }
 
-class NDJSONParser extends TransformStream<string, string[]> {
+class NDJSONParser extends TransformStream<string, JsonObject> {
     constructor() {
         super(NDJSONParser.createTransformer());
     }
 
-    private static createTransformer(): Transformer<string, any> {
+    private static createTransformer(): Transformer<string, JsonObject> {
         let buffer = '';
         return {
             transform(chunk, controller) {

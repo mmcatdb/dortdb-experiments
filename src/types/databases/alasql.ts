@@ -1,5 +1,6 @@
-import { type Result, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from '../database';
+import { type Result, successResult, type Database, type SqlTuple, errorResult, csvRowToSql } from '../database';
 import alasqlRaw from 'alasql';
+import { type DatasourceData, type DatasourceSchema, type TableSchema } from '../schema';
 
 // This is ugly but alasql uses commonjs modules and interface augmentation doesn't work.
 type AlaSQL = typeof alasqlRaw & {
@@ -19,35 +20,38 @@ export class Alasql implements Database {
         new alasql.Database(this.innerDbId);
     }
 
-    private schema: TableSchema[] | undefined;
-
-    setSchema(schema: TableSchema[]): void {
-        this.schema = schema;
-
+    setData(schema: DatasourceSchema, data: DatasourceData): void {
         alasql.use(this.innerDbId);
 
-        for (const table of schema) {
+        const tables = [ ...schema.common, ...schema.relationalOnly ];
+
+        this.createTables(tables);
+
+        for (const table of tables)
+            this.insertTableData(table, data);
+    }
+
+    private createTables(tables: TableSchema[]): void {
+        for (const table of tables) {
             const columnDefs = table.columns.map(col => `\`${col.name}\` ${col.type}`).join(', ');
-            alasql(`DROP TABLE IF EXISTS \`${table.name}\`;`);
-            const createTableSQL = `CREATE TABLE \`${table.name}\` (${columnDefs});`;
+            alasql(`DROP TABLE IF EXISTS \`${table.key}\`;`);
+            const createTableSQL = `CREATE TABLE \`${table.key}\` (${columnDefs});`;
             alasql(createTableSQL);
         }
 
         // TODO references + indexes
     }
 
-    setData(tableName: string, data: TableData): void {
-        const tableSchema = this.schema?.find(t => t.name === tableName);
-        if (!tableSchema)
-            throw new Error('Schema for table ' + tableName + ' not found.');
+    private insertTableData(table: TableSchema, data: DatasourceData): void {
+        const tableData = data.relational[table.key];
+        if (!tableData)
+            throw new Error(`No data found for table "${table.key}".`);
 
-        alasql.use(this.innerDbId);
+        const columnDefs = table.columns.map(() => '?').join(', ');
+        const insert = alasql.compile(`INSERT INTO \`${table.key}\` VALUES (${columnDefs});`);
 
-        const columnDefs = tableSchema.columns.map(() => '?').join(', ');
-        const insert = alasql.compile(`INSERT INTO \`${tableName}\` VALUES (${columnDefs});`);
-
-        for (const row of data)
-            insert(row);
+        for (const row of tableData)
+            insert(csvRowToSql(row, table.columns));
     }
 
     query(sql: string): Result<SqlTuple[]> {

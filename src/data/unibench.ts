@@ -1,20 +1,7 @@
-import { type SqlTuple } from '@/types/database';
-import { type GraphologyGraph } from '@dortdb/lang-cypher';
 import { type SimpleFileSchema, type DatasourceSchema, ColumnType } from '@/types/schema';
+import { copyTableDef } from './utils';
 
-export type UnibenchData = {
-    customers: SqlTuple[];
-    invoices: Document;
-    orders: SqlTuple[];
-    feedback: SqlTuple[];
-    products: SqlTuple[];
-    brandProducts: SqlTuple[];
-    vendors: SqlTuple[];
-    defaultGraph: GraphologyGraph;
-    posts: SqlTuple[];
-};
-
-const innerFiles: SimpleFileSchema[] = [ {
+const files: SimpleFileSchema[] = [ {
     path: 'Dataset/Customer/person_0_0.csv',
     type: 'csv',
     key: 'customers',
@@ -108,8 +95,7 @@ const innerFiles: SimpleFileSchema[] = [ {
 }, {
     path: 'Dataset/Invoice/Invoice.xml',
     type: 'xml',
-    // This is not typo, this kind should be uppercased.
-    key: 'Invoices',
+    key: 'invoices',
 }, {
     path: 'Dataset/Order/Order.json',
     type: 'ndjson',
@@ -119,8 +105,8 @@ const innerFiles: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'hasInterest',
     columns: [
-        { name: 'Person.id', type: ColumnType.int, graphType: 'from' },
-        { name: 'Tag.id', type: ColumnType.int, graphType: 'to' },
+        { name: 'Person.id', type: ColumnType.int },
+        { name: 'Tag.id', type: ColumnType.int },
     ],
     csvOptions: {
         separator: '|',
@@ -131,8 +117,8 @@ const innerFiles: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'knows',
     columns: [
-        { name: 'from', type: ColumnType.int, graphType: 'from' },
-        { name: 'to', type: ColumnType.int, graphType: 'to' },
+        { name: 'from', type: ColumnType.int },
+        { name: 'to', type: ColumnType.int },
         { name: 'creationDate', type: ColumnType.date },
     ],
     csvOptions: {
@@ -144,8 +130,8 @@ const innerFiles: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'hasCreator',
     columns: [
-        { name: 'PostId', type: ColumnType.int, graphType: 'from' },
-        { name: 'PersonId', type: ColumnType.int, graphType: 'to' },
+        { name: 'PostId', type: ColumnType.int },
+        { name: 'PersonId', type: ColumnType.int },
     ],
     csvOptions: {
         separator: '|',
@@ -156,8 +142,8 @@ const innerFiles: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'hasTag',
     columns: [
-        { name: 'PostId', type: ColumnType.int, graphType: 'from' },
-        { name: 'TagId', type: ColumnType.int, graphType: 'to' },
+        { name: 'PostId', type: ColumnType.int },
+        { name: 'TagId', type: ColumnType.int },
     ],
     csvOptions: {
         separator: '|',
@@ -165,34 +151,32 @@ const innerFiles: SimpleFileSchema[] = [ {
     },
 } ];
 
-export const unibenchSchema: DatasourceSchema = {
+export const unibench: DatasourceSchema = {
+    label: 'Unibench',
     file: {
         path: 'https://data.mmcatdb.com/unibench.zip',
         // path: 'https://data.mmcatdb.com/unibench-full.zip',
         type: 'zip',
-        files: innerFiles,
+        files,
     },
-    kinds: [ {
-        type: 'table',
-        key: 'customers',
-    }, {
-        type: 'table',
-        key: 'feedback',
-    }, {
-        type: 'table',
-        key: 'brandProducts',
-    }, {
-        type: 'table',
-        key: 'products',
-    }, {
-        type: 'table',
-        key: 'vendors',
-    }, {
-        type: 'table',
-        key: 'posts',
-    }, {
+    common: [
+        copyTableDef(files, 'customers'),
+        copyTableDef(files, 'feedback'),
+        copyTableDef(files, 'brandProducts'),
+        copyTableDef(files, 'products'),
+        copyTableDef(files, 'vendors'),
+        copyTableDef(files, 'posts'),
+    ],
+    relationalOnly: [
+        copyTableDef(files, 'hasInterest'),
+        copyTableDef(files, 'knows'),
+        copyTableDef(files, 'hasCreator'),
+        copyTableDef(files, 'hasTag'),
+        // TODO documents
+    ],
+    multimodelOnly: [ {
         type: 'document',
-        key: 'Invoices',
+        key: 'invoices',
     }, {
         type: 'document',
         key: 'orders',

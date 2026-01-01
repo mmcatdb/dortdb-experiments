@@ -1,31 +1,27 @@
 import { Button } from './shadcn';
 import { loadDatasource } from '@/dataloaders';
-import { unibenchSchema } from '@/data/unibenchData';
 import { type Database } from '@/types/database';
 import { useState } from 'react';
 import { CheckIcon } from 'lucide-react';
+import { type DatasourceSchema } from '@/types/schema';
 
 type DatasourceLoaderProps = {
+    schema: DatasourceSchema;
     dbs: Database[];
 };
 
-export function DatasourceLoader({ dbs }: DatasourceLoaderProps) {
+export function DatasourceLoader({ schema, dbs }: DatasourceLoaderProps) {
     const [ data, setData ] = useState<Record<string, unknown>>();
 
     async function loadData() {
-        console.log('Loading Unibench data...');
+        console.log(`Loading ${schema.label} data (${schema.file.path}) ...`);
 
-        const result = await loadDatasource<Record<string, unknown>>(unibenchSchema, progress => console.log('Progress:', progress));
+        const result = await loadDatasource(schema, progress => console.log('Progress:', progress));
 
         console.log('Data loaded', result);
 
-        for (const db of dbs) {
-            // TODO Just a temporary workaround to test data loading with dortdb.
-            if (db.setRawData) {
-                for (const tableName in result)
-                    db.setRawData(tableName, result[tableName]);
-            }
-        }
+        for (const db of dbs)
+            db.setData(schema, result);
 
         setData(result);
     };
@@ -33,12 +29,12 @@ export function DatasourceLoader({ dbs }: DatasourceLoaderProps) {
     return (
         <div className='py-4 flex items-center gap-4'>
             <Button onClick={loadData} disabled={!!data}>
-                Load Unibench Data
+                Load {schema.label} Data
             </Button>
 
             {data && (
                 <div className='flex gap-2 text-green-500'>
-                    <CheckIcon /> Unibench data loaded
+                    <CheckIcon /> {schema.label} data loaded
                 </div>
             )}
         </div>

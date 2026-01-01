@@ -1,5 +1,6 @@
-import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, type TableData, type TableSchema, errorResult } from '../database';
+import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, errorResult, csvRowToSql } from '../database';
 import initSqlJs from 'sql.js';
+import { type TableSchema, type DatasourceData, type DatasourceSchema } from '../schema';
 
 const SQL = await initSqlJs({
     // Required to load the wasm binary asynchronously. Of course, you can host it wherever you want.
@@ -17,31 +18,36 @@ export class Sqljs implements Database {
         this.innerDb = new SQL.Database();
     }
 
-    private schema: TableSchema[] | undefined;
+    setData(schema: DatasourceSchema, data: DatasourceData): void {
+        const tables = [ ...schema.common, ...schema.relationalOnly ];
 
-    setSchema(schema: TableSchema[]): void {
-        this.schema = schema;
+        this.createTables(tables);
 
-        for (const table of schema) {
+        for (const table of tables)
+            this.insertTableData(table, data);
+    }
+
+    private createTables(tables: TableSchema[]): void {
+        for (const table of tables) {
             const columnDefs = table.columns.map(col => `"${col.name}" ${col.type}`).join(', ');
-            this.innerDb.run(`DROP TABLE IF EXISTS "${table.name}";`);
-            const createTableSQL = `CREATE TABLE "${table.name}" (${columnDefs});`;
+            this.innerDb.run(`DROP TABLE IF EXISTS "${table.key}";`);
+            const createTableSQL = `CREATE TABLE "${table.key}" (${columnDefs});`;
             this.innerDb.run(createTableSQL);
         }
 
         // TODO references + indexes
     }
 
-    setData(tableName: string, data: TableData): void {
-        const tableSchema = this.schema?.find(t => t.name === tableName);
-        if (!tableSchema)
-            throw new Error('Schema for table ' + tableName + ' not found.');
+    private insertTableData(table: TableSchema, data: DatasourceData): void {
+        const tableData = data.relational[table.key];
+        if (!tableData)
+            throw new Error(`No data found for table "${table.key}".`);
 
-        const columnDefs = tableSchema.columns.map(() => '?').join(', ');
-        const statement = this.innerDb.prepare(`INSERT INTO "${tableName}" VALUES (${columnDefs});`);
+        const columnDefs = table.columns.map(() => '?').join(', ');
+        const statement = this.innerDb.prepare(`INSERT INTO "${table.key}" VALUES (${columnDefs});`);
 
-        for (const row of data)
-            statement.run(row);
+        for (const row of tableData)
+            statement.run(csvRowToSql(row, table.columns));
 
         statement.free();
     }

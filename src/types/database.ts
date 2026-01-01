@@ -1,18 +1,13 @@
+import { type ColumnDef, ColumnType, type CsvRow, type DatasourceData, type DatasourceSchema } from './schema';
+
 export type Database = {
     readonly type: string;
 
     /**
-     * Creates the database schema (if needed).
-     * If the schema already exists, it's dropped first.
+     * If needed, creates tables for the schema (if they already exist, they are dropped first).
+     * Sets data for the tables / some other internal structures.
      */
-    setSchema(schema: TableSchema[]): void;
-
-    /**
-     * Sets the data for the table. If the data already exists, it is replaced.
-     */
-    setData(tableName: string, data: TableData): void;
-
-    setRawData?(tableName: string, data: unknown): void;
+    setData(schema: DatasourceSchema, data: DatasourceData): void;
 
     query(sql: string, defaultLanguage?: DortdbLanguage): Result<SqlTuple[]>;
 
@@ -29,32 +24,29 @@ export type ExampleQuery = {
     defaultLanguage?: DortdbLanguage;
 };
 
+export type SqlRow = SqlValue[];
+export type SqlTuple = Record<string, SqlValue>;
 export type SqlValue = number | string | Uint8Array | null;
 
-/** An array of rows. A row is an array of values. */
-export type TableData = SqlValue[][];
+export function csvRowToSql(row: CsvRow, columns: ColumnDef[]): SqlRow {
+    const sqlRow: SqlRow = new Array(columns.length);
 
-export type TableSchema = {
-    name: string;
-    columns: {
-        name: string;
-        type: string;
-        references?: {
-            table: string;
-            column: string;
-        };
-    }[];
-    // TODO
-    // indexes: {
-    //     name: string;
-    //     columns: string[];
-    //     unique: boolean;
-    // }[];
-};
+    for (let i = 0; i < columns.length; i++) {
+        const column = columns[i];
+        const value = row[column.name];
 
-export type SqlTuple = Record<string, SqlValue>;
+        if (value === undefined)
+            throw new Error(`Column "${column.name}" not found in CSV row.`);
+        else if (column.type === ColumnType.date)
+            sqlRow[i] = (value as Date).toISOString();
+        else
+            sqlRow[i] = value as SqlValue;
+    }
 
-export function rowsToObjects(columns: string[], rows: TableData): SqlTuple[] {
+    return sqlRow;
+}
+
+export function rowsToObjects(columns: string[], rows: SqlRow[]): SqlTuple[] {
     const objects: SqlTuple[] = [];
 
     for (const row of rows) {
