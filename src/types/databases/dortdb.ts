@@ -94,7 +94,9 @@ WHERE EXISTS (
   LANG cypher
   MATCH (:person {id: customers.id})<-[:hasCreator]-(post)-[:hasTag]->({id: 52})
   RETURN 1
-) AND EXISTS (
+)
+-- TODO orders
+AND EXISTS (
   SELECT 1 FROM orders
   WHERE PersonId = customers.id AND EXISTS (
     SELECT 1 FROM unwind(orders.Orderline) orderline WHERE productId = 52

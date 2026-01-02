@@ -1,4 +1,4 @@
-import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, errorResult, csvRowToSql } from '../database';
+import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, errorResult, csvRowToSql, type ExampleQuery } from '../database';
 import initSqlJs from 'sql.js';
 import { type TableSchema, type DatasourceData, type DatasourceSchema } from '../schema';
 
@@ -63,6 +63,32 @@ export class Sqljs implements Database {
     }
 
     getDefaultQuery(): string {
-        return 'SELECT * FROM hello WHERE a = 1 AND b = \'world\'';
+        return defaultQuery;
+    }
+
+    getExamples(): ExampleQuery[] {
+        return examples;
     }
 }
+
+const defaultQuery = `
+-- Retrieve all records from the customers table
+SELECT * FROM customers
+LIMIT 2
+`.trim();
+
+const examples: ExampleQuery[] = [ `
+-- TODO
+SELECT * FROM customers WHERE id = 4145
+`, `
+SELECT customers.id, customers.firstName FROM customers
+JOIN hasCreator ON hasCreator.PersonId = customers.id
+JOIN posts ON posts.id = hasCreator.PostId
+JOIN hasTag ON hasTag.PostId = posts.id
+WHERE hasTag.TagId = 52
+-- TODO orders
+` ].map((example, index) => ({
+    name: `Query ${index + 1}`,
+    query: example.trim(),
+    defaultLanguage: 'sql',
+}));
