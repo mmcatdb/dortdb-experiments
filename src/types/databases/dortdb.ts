@@ -96,12 +96,12 @@ WHERE EXISTS (
   RETURN 1
 )
 -- TODO orders
-AND EXISTS (
-  SELECT 1 FROM orders
-  WHERE PersonId = customers.id AND EXISTS (
-    SELECT 1 FROM unwind(orders.Orderline) orderline WHERE productId = 52
-  )
-)
+-- AND EXISTS (
+--   SELECT 1 FROM orders
+--   WHERE PersonId = customers.id AND EXISTS (
+--     SELECT 1 FROM unwind(orders.Orderline) orderline WHERE productId = 52
+--   )
+-- )
     `,
     defaultLanguage: 'sql',
 }, {
