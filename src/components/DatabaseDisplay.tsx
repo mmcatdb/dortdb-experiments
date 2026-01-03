@@ -99,7 +99,8 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
 
                         {result.output.status && (
                             <div className='text-sm font-medium text-muted-foreground'>
-                                {`${result.output.data.length} ${plural(result.output.data.length, 'row')} in ${result.executionTimeMs.toFixed(2)} ms`}
+                                {/* Tenths of milliseconds is probably the best we can do here. */}
+                                {`${result.output.data.length} ${plural(result.output.data.length, 'row')} in ${result.executionTimeMs.toFixed(1)} ms`}
                             </div>
                         )}
                     </div>

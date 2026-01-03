@@ -1,0 +1,50 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      #- run: echo "${{ vars.DOT_ENV }}" > .env
+
+      - run: bun install
+      - run: bun run build --base=${{ vars.BASE }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: ./dist
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        with:
+          token: ${{ github.token }}
+          artifact_name: github-pages
