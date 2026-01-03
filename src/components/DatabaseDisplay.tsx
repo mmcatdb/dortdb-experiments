@@ -1,8 +1,8 @@
 import { type Dispatch, useId, useState } from 'react';
 import type { Database, DortdbLanguage, ExampleQuery } from '@/types/database';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
-import { cn } from './utils';
 import { ChevronDownIcon } from 'lucide-react';
+import { plural } from './utils';
 
 type DatabaseDisplayProps = {
     db: Database;
@@ -14,7 +14,8 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
     const [ defaultLanguage, setDefaultLanguage ] = useState<DortdbLanguage>('sql');
 
     const [ isExecuting, setIsExecuting ] = useState(false);
-    const [ result, setResult ] = useState<ReturnType<Database['query']>>();
+    const [ isExpanded, setIsExpanded ] = useState(false);
+    const [ result, setResult ] = useState<QueryResult>();
 
     async function executeQuery() {
         if (!query.trim()) {
@@ -27,17 +28,22 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
 
         setIsExecuting(true);
         // TODO It would be really nice to do this truly async, e.g., in a web worker.
-        const output = await new Promise<ReturnType<Database['query']>>(resolve => setTimeout(() => {
-            const innerOutput = db.query(query, defaultLanguage);
-            resolve(innerOutput);
+        const result = await new Promise<QueryResult>(resolve => setTimeout(() => {
+            const start = performance.now();
+            const output = db.query(query, defaultLanguage);
+            const end = performance.now();
+            const executionTimeMs = end - start;
+            resolve({ output, executionTimeMs });
         }));
-        setIsExecuting(false);
-        setResult(output);
 
-        if (output.status)
-            console.log(`Query success: ${output.data.length} rows`, output.data);
+        setIsExecuting(false);
+        setResult(result);
+        setIsExpanded(false);
+
+        if (result.output.status)
+            console.log(`Query success: ${result.output.data.length} rows in ${result.executionTimeMs} ms`, result.output.data);
         else
-            console.log('Query error:', output.error);
+            console.log('Query error:', result.output.error);
     }
 
     function selectExample({ query, defaultLanguage }: ExampleQuery) {
@@ -87,14 +93,44 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
             </div>
 
             {result && (
-                <div className='mt-2'>
-                    <h3 className='text-md font-semibold'>Result:</h3>
-                    <pre className={cn('px-2 py-1 rounded-md bg-accent text-sm text-wrap', !result.status && 'text-destructive')}>{result.status ? JSON.stringify(result.data, null, 4) : `Error: ${errorToString(result.error)}`}</pre>
+                <div className='mt-2 space-y-1'>
+                    <div className='flex items-baseline gap-4'>
+                        <h3 className='text-md font-semibold'>Result:</h3>
+
+                        {result.output.status && (
+                            <div className='text-sm font-medium text-muted-foreground'>
+                                {`${result.output.data.length} ${plural(result.output.data.length, 'row')} in ${result.executionTimeMs.toFixed(2)} ms`}
+                            </div>
+                        )}
+                    </div>
+
+                    {result.output.status ? (<>
+                        {(isExpanded ? result.output.data : result.output.data.slice(0, NOT_EXPANDED_ROWS)).map((row, index) => (
+                            <pre key={index} className='px-2 py-1 rounded-md bg-accent text-sm text-wrap'>
+                                {JSON.stringify(row, null, 4)}
+                            </pre>
+                        ))}
+
+                        {result.output.data.length > NOT_EXPANDED_ROWS && !isExpanded && (
+                            <Button variant='outline' onClick={() => setIsExpanded(true)}>
+                                {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
+                            </Button>
+                        )}
+                    </>) : (
+                        <pre className='px-2 py-1 rounded-md bg-accent text-sm text-wrap text-destructive'>Error: {errorToString(result.output.error)}</pre>
+                    )}
                 </div>
             )}
         </div>
     );
 }
+
+type QueryResult = {
+    output: ReturnType<Database['query']>;
+    executionTimeMs: number;
+};
+
+const NOT_EXPANDED_ROWS = 1;
 
 const languages: DortdbLanguage[] = [ 'sql', 'cypher', 'xquery' ];
 

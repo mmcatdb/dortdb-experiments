@@ -1,4 +1,4 @@
-import { type SimpleFileSchema, type DatasourceSchema, ColumnType } from '@/types/schema';
+import { type SimpleFileSchema, type DatasourceSchema, ColumnType, type DocumentTablesSchema } from '@/types/schema';
 import { copyTableDef } from './utils';
 
 const files: SimpleFileSchema[] = [ {
@@ -151,6 +151,55 @@ const files: SimpleFileSchema[] = [ {
     },
 } ];
 
+const ordersDocumentTables: DocumentTablesSchema = {
+    type: 'documentTables',
+    from: 'json',
+    key: 'orders',
+    root: {
+        name: 'orders',
+        columns: [ {
+            name: 'OrderId',
+            type: ColumnType.string,
+            isPrimaryKey: true,
+        }, {
+            name: 'PersonId',
+            type: ColumnType.int,
+        }, {
+            name: 'OrderDate',
+            type: ColumnType.date,
+        }, {
+            name: 'TotalPrice',
+            type: ColumnType.float,
+        } ],
+        children: [ {
+            key: 'Orderline',
+            name: 'Orderline',
+            columns: [ {
+                name: 'productId',
+                type: ColumnType.int,
+                isPrimaryKey: true,
+            }, {
+                name: 'asin',
+                type: ColumnType.string,
+            }, {
+                name: 'title',
+                type: ColumnType.string,
+            }, {
+                name: 'price',
+                type: ColumnType.float,
+            }, {
+                name: 'brand',
+                type: ColumnType.string,
+            } ],
+            fromParent: [ {
+                name: 'OrderId',
+                type: ColumnType.string,
+                isPrimaryKey: true,
+            } ],
+        } ],
+    },
+};
+
 export const unibench: DatasourceSchema = {
     label: 'Unibench',
     file: {
@@ -172,7 +221,20 @@ export const unibench: DatasourceSchema = {
         copyTableDef(files, 'knows'),
         copyTableDef(files, 'hasCreator'),
         copyTableDef(files, 'hasTag'),
-        // TODO documents
+        ordersDocumentTables,
+        {
+            type: 'documentTables',
+            from: 'xml',
+            key: 'invoices',
+            root: {
+                ...ordersDocumentTables.root,
+                name: 'invoices',
+                children: [ {
+                    ...ordersDocumentTables.root.children![0],
+                    name: 'InvoiceLine',
+                } ],
+            },
+        },
     ],
     multimodelOnly: [ {
         type: 'document',

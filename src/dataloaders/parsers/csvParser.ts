@@ -18,7 +18,7 @@ class CSVParser extends TransformStream<string, CsvRow> {
             fromLine: options.hasHeader ? 2 : 1,
             escape: '\\',
             columns: columns,
-            cast: createCastFunction(columns),
+            cast: createCastingFunction(columns),
         }));
     }
 
@@ -52,7 +52,7 @@ class CSVParser extends TransformStream<string, CsvRow> {
 
 type CastingFunction = (value: string, context: parser.CastingContext) => CsvValue;
 
-function createCastFunction(columns: ColumnDef[]): CastingFunction {
+function createCastingFunction(columns: ColumnDef[]): CastingFunction {
     const columnMap = new Map(columns.map(col => [ col.name, col.type ]));
 
     return (value: string, context: { column: number | string }) => {

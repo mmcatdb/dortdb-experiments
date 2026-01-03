@@ -5,8 +5,8 @@ export type DatasourceSchema = {
     file: FileSchema;
     /** Kinds that should be used in both relational and multimodel databases. */
     common: TableSchema[];
-    relationalOnly: TableSchema[];
-    multimodelOnly: KindSchema[];
+    relationalOnly: RelationalKindSchema[];
+    multimodelOnly: MultimodelKindSchema[];
 };
 
 export type DatasourceData = {
@@ -55,6 +55,7 @@ export type JsonPrimitive = string | number | boolean | null;
 export type ColumnDef = {
     name: string;
     type: ColumnType;
+    isPrimaryKey?: boolean;
 
     // TODO
     // references?: {
@@ -83,14 +84,13 @@ export type ParsedSimpleFileData = CsvRow[] | Document | JsonObject[];
 // #endregion
 // #region Kinds
 
-export type KindSchema = TableSchema | GraphSchema | DocumentSchema;
+export type RelationalKindSchema = TableSchema | DocumentTablesSchema;
+export type MultimodelKindSchema = TableSchema | GraphSchema | DocumentSchema;
 
 export type TableSchema = {
     type: 'table';
     key: string;
     columns: ColumnDef[];
-    // TODO Not needed for now
-    // columns: string[];
 };
 
 export type GraphSchema = {
@@ -119,6 +119,26 @@ type NodeSource = {
 
 export type DocumentSchema = {
     type: 'document';
+    key: string;
+    table?: DocumentTable;
+};
+
+export type DocumentTablesSchema = {
+    type: 'documentTables';
+    from: 'json' | 'xml';
+    key: string;
+    root: DocumentTable;
+};
+
+export type DocumentTable = {
+    name: string;
+    columns: ColumnDef[];
+    /** If defined, these columns will be injected from the parent. Type is not needed because it ahs to be the same. The key refers to the key in the parent row, i.e., the parent column's `name` */
+    fromParent?: ColumnDef[];
+    children?: DocumentTableChild[];
+};
+
+type DocumentTableChild = DocumentTable & {
     key: string;
 };
 

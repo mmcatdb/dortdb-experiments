@@ -1,6 +1,8 @@
 import { type Result, successResult, type Database, type SqlTuple, errorResult, csvRowToSql, type ExampleQuery } from '../database';
 import alasqlRaw from 'alasql';
 import { type DatasourceData, type DatasourceSchema, type TableSchema } from '../schema';
+import { sqlQueryExamples } from './sqljs';
+import { extractTablesFromDocument } from '@/data/utils';
 
 // This is ugly but alasql uses commonjs modules and interface augmentation doesn't work.
 type AlaSQL = typeof alasqlRaw & {
@@ -23,7 +25,9 @@ export class Alasql implements Database {
     setData(schema: DatasourceSchema, data: DatasourceData): void {
         alasql.use(this.innerDbId);
 
-        const tables = [ ...schema.common, ...schema.relationalOnly ];
+        const tables = [ ...schema.common, ...schema.relationalOnly ].flatMap(
+            kind => kind.type === 'table' ? [ kind ] : extractTablesFromDocument(kind.root),
+        );
 
         this.createTables(tables);
 
@@ -69,7 +73,8 @@ export class Alasql implements Database {
     }
 
     getExamples(): ExampleQuery[] {
-        return examples;
+        // Not sure whether this is correct, sqljs has a little different escaping.
+        return sqlQueryExamples;
     }
 }
 
@@ -78,19 +83,3 @@ const defaultQuery = `
 SELECT * FROM customers
 LIMIT 2
 `.trim();
-
-const examples: ExampleQuery[] = [ `
--- TODO
-SELECT * FROM customers WHERE id = 4145
-`, `
-SELECT customers.id, customers.firstName FROM customers
-JOIN hasCreator ON hasCreator.PersonId = customers.id
-JOIN posts ON posts.id = hasCreator.PostId
-JOIN hasTag ON hasTag.PostId = posts.id
-WHERE hasTag.TagId = 52
--- TODO orders
-` ].map((example, index) => ({
-    name: `Query ${index + 1}`,
-    query: example.trim(),
-    defaultLanguage: 'sql',
-}));
