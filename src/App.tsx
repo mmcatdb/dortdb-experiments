@@ -16,13 +16,13 @@ export function App() {
 
     return (<>
         <div className='mx-auto max-w-6xl py-12 space-y-8'>
+            <DatasourceLoader schema={unibench} dbs={dbs} />
+
             <DatabaseDisplay db={dbs[0]} />
 
             <DatabaseDisplay db={dbs[1]} />
 
             <DatabaseDisplay db={dbs[2]} />
-
-            <DatasourceLoader schema={unibench} dbs={dbs} />
         </div>
     </>);
 }
