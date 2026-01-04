@@ -19,15 +19,20 @@ export class Sqljs implements Database {
         this.innerDb = new SQL.Database();
     }
 
-    setData(schema: DatasourceSchema, data: DatasourceData): void {
+    async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
         const tables = [ ...schema.common, ...schema.relationalOnly ].flatMap(
             kind => kind.type === 'table' ? [ kind ] : extractTablesFromDocument(kind.root),
         );
 
         this.createTables(tables);
 
-        for (const table of tables)
+        const steps = tables.length + 1;
+        let step = 1;
+
+        for (const table of tables) {
+            await onProgress?.(step++ / steps);
             this.insertTableData(table, data);
+        }
     }
 
     private createTables(tables: TableSchema[]): void {

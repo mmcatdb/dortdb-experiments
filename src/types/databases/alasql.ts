@@ -22,7 +22,7 @@ export class Alasql implements Database {
         new alasql.Database(this.innerDbId);
     }
 
-    setData(schema: DatasourceSchema, data: DatasourceData): void {
+    async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
         alasql.use(this.innerDbId);
 
         const tables = [ ...schema.common, ...schema.relationalOnly ].flatMap(
@@ -31,8 +31,13 @@ export class Alasql implements Database {
 
         this.createTables(tables);
 
-        for (const table of tables)
+        const steps = tables.length + 1;
+        let step = 1;
+
+        for (const table of tables) {
+            await onProgress?.(step++ / steps);
             this.insertTableData(table, data);
+        }
     }
 
     private createTables(tables: TableSchema[]): void {

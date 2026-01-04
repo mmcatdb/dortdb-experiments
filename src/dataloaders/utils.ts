@@ -41,3 +41,8 @@ export function streamWithProgress(onProgress: (bytesRead: number) => void) {
         },
     });
 }
+
+// TODO It would be really nice to do this truly async, e.g., in a web worker.
+export function updateUI(): Promise<void> {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+}

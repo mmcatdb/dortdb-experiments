@@ -24,7 +24,7 @@ export class Dortdb implements Database {
         });
     }
 
-    setData(schema: DatasourceSchema, data: DatasourceData): void {
+    async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
         const tables = [ ...schema.common, ...schema.multimodelOnly ];
 
         for (const table of tables) {
@@ -34,6 +34,8 @@ export class Dortdb implements Database {
 
             this.innerDb.registerSource([ table.key ], tableData);
         }
+
+        await onProgress?.(1 / 2);
 
         // FIXME This is specific for unibench data, make this more generic later.
         this.innerDb.createIndex([ 'defaultGraph', 'nodes' ], [], ConnectionIndex);

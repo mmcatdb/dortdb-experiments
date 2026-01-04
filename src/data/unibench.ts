@@ -200,11 +200,10 @@ const ordersDocumentTables: DocumentTablesSchema = {
     },
 };
 
-export const unibench: DatasourceSchema = {
-    label: 'Unibench',
+export const unibenchSample: DatasourceSchema = {
+    label: 'Unibench Sample',
     file: {
         path: 'https://data.mmcatdb.com/unibench.zip',
-        // path: 'https://data.mmcatdb.com/unibench-full.zip',
         type: 'zip',
         files,
     },
@@ -297,4 +296,13 @@ export const unibench: DatasourceSchema = {
             },
         } ],
     } ],
+};
+
+export const unibenchFull: DatasourceSchema = {
+    ...unibenchSample,
+    label: 'Unibench Full',
+    file: {
+        ...unibenchSample.file,
+        path: 'https://data.mmcatdb.com/unibench-full.zip',
+    },
 };

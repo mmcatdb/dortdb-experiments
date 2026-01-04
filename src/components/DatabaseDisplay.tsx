@@ -2,7 +2,8 @@ import { type Dispatch, useId, useState } from 'react';
 import type { Database, DortdbLanguage, ExampleQuery } from '@/types/database';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
 import { ChevronDownIcon } from 'lucide-react';
-import { plural } from './utils';
+import { plural, timeQuantity } from './utils';
+import { updateUI } from '@/dataloaders/utils';
 
 type DatabaseDisplayProps = {
     db: Database;
@@ -27,23 +28,22 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
         console.log('Executing query on db:', db);
 
         setIsExecuting(true);
-        // TODO It would be really nice to do this truly async, e.g., in a web worker.
-        const result = await new Promise<QueryResult>(resolve => setTimeout(() => {
-            const start = performance.now();
-            const output = db.query(query, defaultLanguage);
-            const end = performance.now();
-            const executionTimeMs = end - start;
-            resolve({ output, executionTimeMs });
-        }));
+
+        await updateUI();
+
+        const start = performance.now();
+        const output = db.query(query, defaultLanguage);
+        const end = performance.now();
+        const executionTimeMs = end - start;
+
+        if (output.status)
+            console.log(`Query success: ${output.data.length} rows in ${executionTimeMs} ms`, output.data);
+        else
+            console.log('Query error:', output.error);
 
         setIsExecuting(false);
-        setResult(result);
+        setResult({ output, executionTimeMs });
         setIsExpanded(false);
-
-        if (result.output.status)
-            console.log(`Query success: ${result.output.data.length} rows in ${result.executionTimeMs} ms`, result.output.data);
-        else
-            console.log('Query error:', result.output.error);
     }
 
     function selectExample({ query, defaultLanguage }: ExampleQuery) {
@@ -90,6 +90,18 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
                 {examples && (
                     <ExampleSelect options={examples} onSelect={selectExample} />
                 )}
+
+                {result?.output?.status && result.output.data.length > NOT_EXPANDED_ROWS && (
+                    !isExpanded ? (
+                        <Button variant='outline' onClick={() => setIsExpanded(true)}>
+                            {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
+                        </Button>
+                    ) : (
+                        <Button variant='outline' onClick={() => setIsExpanded(false)}>
+                            Show less
+                        </Button>
+                    )
+                )}
             </div>
 
             {result && (
@@ -100,7 +112,7 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
                         {result.output.status && (
                             <div className='text-sm font-medium text-muted-foreground'>
                                 {/* Tenths of milliseconds is probably the best we can do here. */}
-                                {`${result.output.data.length} ${plural(result.output.data.length, 'row')} in ${result.executionTimeMs.toFixed(1)} ms`}
+                                {`${result.output.data.length} ${plural(result.output.data.length, 'row')} in ${timeQuantity.prettyPrint(result.executionTimeMs)}`}
                             </div>
                         )}
                     </div>
@@ -112,10 +124,16 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
                             </pre>
                         ))}
 
-                        {result.output.data.length > NOT_EXPANDED_ROWS && !isExpanded && (
-                            <Button variant='outline' onClick={() => setIsExpanded(true)}>
-                                {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
-                            </Button>
+                        {result.output.data.length > NOT_EXPANDED_ROWS && (
+                            !isExpanded ? (
+                                <Button variant='outline' onClick={() => setIsExpanded(true)}>
+                                    {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
+                                </Button>
+                            ) : (
+                                <Button variant='outline' onClick={() => setIsExpanded(false)}>
+                                    Show less
+                                </Button>
+                            )
                         )}
                     </>) : (
                         <pre className='px-2 py-1 rounded-md bg-accent text-sm text-wrap text-destructive'>Error: {errorToString(result.output.error)}</pre>

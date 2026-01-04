@@ -7,7 +7,7 @@ export type Database = {
      * If needed, creates tables for the schema (if they already exist, they are dropped first).
      * Sets data for the tables / some other internal structures.
      */
-    setData(schema: DatasourceSchema, data: DatasourceData): void;
+    setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void>;
 
     query(sql: string, defaultLanguage?: DortdbLanguage): Result<SqlTuple[]>;
 
