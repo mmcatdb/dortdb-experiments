@@ -93,11 +93,11 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
 
                 {result?.output?.status && result.output.data.length > NOT_EXPANDED_ROWS && (
                     !isExpanded ? (
-                        <Button variant='outline' onClick={() => setIsExpanded(true)}>
+                        <Button variant='outline' className='ml-auto' onClick={() => setIsExpanded(true)}>
                             {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
                         </Button>
                     ) : (
-                        <Button variant='outline' onClick={() => setIsExpanded(false)}>
+                        <Button variant='outline' className='ml-auto' onClick={() => setIsExpanded(false)}>
                             Show less
                         </Button>
                     )
