@@ -9,9 +9,10 @@ import { updateUI } from '@/dataloaders/utils';
 type DatasourceLoaderProps = {
     schema: DatasourceSchema;
     dbs: Database[];
+    onLoaded?: () => void;
 };
 
-export function DatasourceLoader({ schema, dbs }: DatasourceLoaderProps) {
+export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProps) {
     const [ data, setData ] = useState<Record<string, unknown>>();
     const [ isLoading, setIsLoading ] = useState(false);
     const [ progress, setProgress ] = useState<Progress>();
@@ -37,6 +38,7 @@ export function DatasourceLoader({ schema, dbs }: DatasourceLoaderProps) {
 
         setIsLoading(false);
         setData(result);
+        onLoaded?.();
     };
 
     return (

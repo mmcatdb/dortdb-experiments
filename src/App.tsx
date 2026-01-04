@@ -15,18 +15,22 @@ export function App() {
         new Alasql(),
     ]);
 
+    const [ isLoaded, setIsLoaded ] = useState(false);
+
     const [ isFull, setIsFull ] = useState(false);
     const isFullId = useId();
 
     return (<>
         <div className='mx-auto max-w-6xl py-12 space-y-8'>
             <div className='flex items-center gap-4'>
-                <DatasourceLoader schema={isFull ? unibenchFull : unibenchSample} dbs={dbs} />
+                <DatasourceLoader schema={isFull ? unibenchFull : unibenchSample} dbs={dbs} onLoaded={() => setIsLoaded(true)} />
 
-                <div className='ml-auto flex items-center gap-2'>
-                    <Switch id={isFullId} checked={isFull} onCheckedChange={setIsFull} />
-                    <Label htmlFor={isFullId} className='cursor-pointer'>Use full dataset (takes like 10 minutes and 8 GB of RAM)</Label>
-                </div>
+                {!isLoaded && (
+                    <div className='ml-auto flex items-center gap-2'>
+                        <Switch id={isFullId} checked={isFull} onCheckedChange={setIsFull} />
+                        <Label htmlFor={isFullId} className='cursor-pointer'>Use full dataset (takes like 10 minutes and 8 GB of RAM)</Label>
+                    </div>
+                )}
             </div>
 
             <DatabaseDisplay db={dbs[0]} />
