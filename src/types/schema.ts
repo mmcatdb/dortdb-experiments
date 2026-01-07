@@ -43,6 +43,27 @@ export type SimpleFileSchema = {
 export type CsvParseOptions = {
     separator: string;
     hasHeader: boolean;
+    /**
+     * Well guess why is this needed. You think nobody would be stupid enough to create a csv file with duplicated primary keys? Think again.
+     * Use this only when absolutely necessary, as it requires extra processing.
+     * Also, we can't just delegate this to the database, because dortdb doesn't have normal inserts ...
+     */
+    doFilterDuplicates?: boolean;
+    /**
+     * This is just sad. And disgusting. But mostly sad.
+     * These rows will be filtered out. Only primary key columns are needed.
+    */
+    doFilterReferences?: boolean;
+    /**
+    * Catch-all for everything we don't like.
+    */
+    filterRows?: CsvRow[];
+    /**
+     * Used for generating composite IDs by joining primary key columns with this separator (for one of the options above).
+     * Make sure to provide a value that does not appear in the data.
+     * Needed only if there are multiple primary key columns.
+     */
+    idSeparator?: string;
 };
 
 export type CsvRow = Record<string, CsvValue>;
@@ -56,12 +77,10 @@ export type ColumnDef = {
     name: string;
     type: ColumnType;
     isPrimaryKey?: boolean;
-
-    // TODO
-    // references?: {
-    //     table: string;
-    //     column: string;
-    // };
+    references?: {
+        key: string;
+        column: string;
+    };
 
     // TODO
     // indexes: {

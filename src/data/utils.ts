@@ -30,3 +30,39 @@ export function extractTablesFromDocument(schema: DocumentTable): TableSchema[] 
 
     return tables;
 }
+
+type ItemAccessor<T> = (item: T) => {
+    key: string;
+    dependencies: string[];
+};
+
+export function topologicalSort<T>(items: T[], accessor: ItemAccessor<T>): T[] {
+    const sortedKeys: string[] = [];
+    const visited = new Set<string>();
+    const visiting = new Set<string>();
+
+    const normalizedItems = items.map(item => accessor(item));
+    const keyMap = new Map(normalizedItems.map(item => [ item.key, item ]));
+
+    function visit(key: string) {
+        if (visited.has(key) || visiting.has(key))
+            // Cycle detection.
+            return;
+
+        visiting.add(key);
+        const item = keyMap.get(key);
+        if (!item)
+            throw new Error(`Item with key "${key}" not found.`);
+
+        item.dependencies.forEach(dependentKey => visit(dependentKey));
+
+        visiting.delete(key);
+        visited.add(key);
+
+        sortedKeys.push(key);
+    };
+
+    normalizedItems.forEach(item => visit(item.key));
+
+    return sortedKeys.map(key => items.find(i => accessor(i).key === key)!);
+}

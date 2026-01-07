@@ -6,7 +6,7 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'customers',
     columns: [
-        { name: 'id', type: ColumnType.int },
+        { name: 'id', type: ColumnType.int, isPrimaryKey: true },
         { name: 'firstName', type: ColumnType.string },
         { name: 'lastName', type: ColumnType.string },
         { name: 'gender', type: ColumnType.string },
@@ -25,8 +25,8 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'feedback',
     columns: [
-        { name: 'productAsin', type: ColumnType.string },
-        { name: 'personId', type: ColumnType.int },
+        { name: 'productAsin', type: ColumnType.string, isPrimaryKey: true, references: { key: 'products', column: 'asin' } },
+        { name: 'personId', type: ColumnType.int, isPrimaryKey: true, references: { key: 'customers', column: 'id' } },
         { name: 'feedback', type: ColumnType.string },
     ],
     csvOptions: {
@@ -38,19 +38,20 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'brandProducts',
     columns: [
-        { name: 'brandName', type: ColumnType.string },
-        { name: 'productAsin', type: ColumnType.string },
+        { name: 'brandName', type: ColumnType.string, references: { key: 'vendors', column: 'id' } },
+        { name: 'productAsin', type: ColumnType.string, isPrimaryKey: true, references: { key: 'products', column: 'asin' } },
     ],
     csvOptions: {
         separator: ',',
         hasHeader: false,
+        doFilterReferences: true,
     },
 }, {
     path: 'Dataset/Product/Product.csv',
     type: 'csv',
     key: 'products',
     columns: [
-        { name: 'asin', type: ColumnType.string },
+        { name: 'asin', type: ColumnType.string, isPrimaryKey: true },
         { name: 'title', type: ColumnType.string },
         { name: 'price', type: ColumnType.float },
         { name: 'imgUrl', type: ColumnType.string },
@@ -66,20 +67,21 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'vendors',
     columns: [
-        { name: 'id', type: ColumnType.string },
+        { name: 'id', type: ColumnType.string, isPrimaryKey: true },
         { name: 'Country', type: ColumnType.string },
         { name: 'Industry', type: ColumnType.string },
     ],
     csvOptions: {
         separator: ',',
         hasHeader: true,
+        doFilterDuplicates: true, // Shame. Shame. Shame.
     },
 }, {
     path: 'Dataset/SocialNetwork/post_0_0.csv',
     type: 'csv',
     key: 'posts',
     columns: [
-        { name: 'id', type: ColumnType.int },
+        { name: 'id', type: ColumnType.int, isPrimaryKey: true },
         { name: 'imageFile', type: ColumnType.string },
         { name: 'creationDate', type: ColumnType.date },
         { name: 'locationIP', type: ColumnType.string },
@@ -105,8 +107,8 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'hasInterest',
     columns: [
-        { name: 'Person.id', type: ColumnType.int },
-        { name: 'Tag.id', type: ColumnType.int },
+        { name: 'Person.id', type: ColumnType.int, isPrimaryKey: true, references: { key: 'customers', column: 'id' } },
+        { name: 'Tag.id', type: ColumnType.int, isPrimaryKey: true }, // Doesn't reference anything as the tags table doesn't exist.
     ],
     csvOptions: {
         separator: '|',
@@ -117,21 +119,22 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'knows',
     columns: [
-        { name: 'from', type: ColumnType.int },
-        { name: 'to', type: ColumnType.int },
+        { name: 'from', type: ColumnType.int, isPrimaryKey: true, references: { key: 'customers', column: 'id' } },
+        { name: 'to', type: ColumnType.int, isPrimaryKey: true, references: { key: 'customers', column: 'id' } },
         { name: 'creationDate', type: ColumnType.date },
     ],
     csvOptions: {
         separator: '|',
         hasHeader: true,
+        doFilterReferences: true,
     },
 }, {
     path: 'Dataset/SocialNetwork/post_hasCreator_person_0_0.csv',
     type: 'csv',
     key: 'hasCreator',
     columns: [
-        { name: 'PostId', type: ColumnType.int },
-        { name: 'PersonId', type: ColumnType.int },
+        { name: 'PostId', type: ColumnType.int, isPrimaryKey: true, references: { key: 'posts', column: 'id' } },
+        { name: 'PersonId', type: ColumnType.int, isPrimaryKey: true, references: { key: 'customers', column: 'id' } },
     ],
     csvOptions: {
         separator: '|',
@@ -142,8 +145,8 @@ const files: SimpleFileSchema[] = [ {
     type: 'csv',
     key: 'hasTag',
     columns: [
-        { name: 'PostId', type: ColumnType.int },
-        { name: 'TagId', type: ColumnType.int },
+        { name: 'PostId', type: ColumnType.int, isPrimaryKey: true, references: { key: 'posts', column: 'id' } },
+        { name: 'TagId', type: ColumnType.int, isPrimaryKey: true }, // Doesn't reference anything as the tags table doesn't exist.
     ],
     csvOptions: {
         separator: '|',
@@ -157,45 +160,25 @@ const ordersDocumentTables: DocumentTablesSchema = {
     key: 'orders',
     root: {
         name: 'orders',
-        columns: [ {
-            name: 'OrderId',
-            type: ColumnType.string,
-            isPrimaryKey: true,
-        }, {
-            name: 'PersonId',
-            type: ColumnType.int,
-        }, {
-            name: 'OrderDate',
-            type: ColumnType.date,
-        }, {
-            name: 'TotalPrice',
-            type: ColumnType.float,
-        } ],
+        columns: [
+            { name: 'OrderId', type: ColumnType.string, isPrimaryKey: true },
+            { name: 'PersonId', type: ColumnType.int, references: { key: 'customers', column: 'id' } },
+            { name: 'OrderDate', type: ColumnType.date },
+            { name: 'TotalPrice', type: ColumnType.float },
+        ],
         children: [ {
             key: 'Orderline',
             name: 'Orderline',
-            columns: [ {
-                name: 'productId',
-                type: ColumnType.int,
-                isPrimaryKey: true,
-            }, {
-                name: 'asin',
-                type: ColumnType.string,
-            }, {
-                name: 'title',
-                type: ColumnType.string,
-            }, {
-                name: 'price',
-                type: ColumnType.float,
-            }, {
-                name: 'brand',
-                type: ColumnType.string,
-            } ],
-            fromParent: [ {
-                name: 'OrderId',
-                type: ColumnType.string,
-                isPrimaryKey: true,
-            } ],
+            columns: [
+                { name: 'productId', type: ColumnType.int },
+                { name: 'asin', type: ColumnType.string, isPrimaryKey: true, references: { key: 'products', column: 'asin' } },
+                { name: 'title', type: ColumnType.string },
+                { name: 'price', type: ColumnType.float },
+                { name: 'brand', type: ColumnType.string },
+            ],
+            fromParent: [
+                { name: 'OrderId', type: ColumnType.string, isPrimaryKey: true, references: { key: 'orders', column: 'OrderId' } },
+            ],
         } ],
     },
 };
@@ -221,19 +204,8 @@ export const unibenchSample: DatasourceSchema = {
         copyTableDef(files, 'hasCreator'),
         copyTableDef(files, 'hasTag'),
         ordersDocumentTables,
-        {
-            type: 'documentTables',
-            from: 'xml',
-            key: 'invoices',
-            root: {
-                ...ordersDocumentTables.root,
-                name: 'invoices',
-                children: [ {
-                    ...ordersDocumentTables.root.children![0],
-                    name: 'InvoiceLine',
-                } ],
-            },
-        },
+        // No need to include invoices as they are a literal copy of orders.
+        // We still have them in the multimodel schema though to show we support both json and xml.
     ],
     multimodelOnly: [ {
         type: 'document',

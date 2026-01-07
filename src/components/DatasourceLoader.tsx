@@ -3,7 +3,7 @@ import { loadDatasource, type Progress } from '@/dataloaders';
 import { type Database } from '@/types/database';
 import { useState } from 'react';
 import { CheckIcon, TriangleAlertIcon } from 'lucide-react';
-import { type DatasourceSchema } from '@/types/schema';
+import { type DatasourceData, type DatasourceSchema } from '@/types/schema';
 import { updateUI } from '@/dataloaders/utils';
 
 type DatasourceLoaderProps = {
@@ -13,7 +13,7 @@ type DatasourceLoaderProps = {
 };
 
 export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProps) {
-    const [ data, setData ] = useState<Record<string, unknown>>();
+    const [ data, setData ] = useState<DatasourceData>();
     const [ isLoading, setIsLoading ] = useState(false);
     const [ progress, setProgress ] = useState<Progress>();
 
@@ -22,7 +22,8 @@ export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProp
 
         setIsLoading(true);
         const result = await loadDatasource(schema, setProgress);
-        console.log('Data loaded', result);
+        // console.log('Data loaded', result);
+        console.log('Data loaded');
 
         for (const db of dbs) {
             const process = `Inserting data into ${db.type}`;
@@ -34,6 +35,8 @@ export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProp
                 setProgress({ process, done });
                 return updateUI();
             });
+
+            console.log(`Data inserted into ${db.type}`);
         }
 
         setIsLoading(false);

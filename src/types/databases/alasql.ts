@@ -2,7 +2,7 @@ import { type Result, successResult, type Database, type SqlTuple, errorResult, 
 import alasqlRaw from 'alasql';
 import { type DatasourceData, type DatasourceSchema, type TableSchema } from '../schema';
 import { sqlQueryExamples } from './sqljs';
-import { extractTablesFromDocument } from '@/data/utils';
+import { createPreparedInsertStatement, createSqliteSchema } from '../sqlite';
 
 // This is ugly but alasql uses commonjs modules and interface augmentation doesn't work.
 type AlaSQL = typeof alasqlRaw & {
@@ -25,11 +25,9 @@ export class Alasql implements Database {
     async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
         alasql.use(this.innerDbId);
 
-        const tables = [ ...schema.common, ...schema.relationalOnly ].flatMap(
-            kind => kind.type === 'table' ? [ kind ] : extractTablesFromDocument(kind.root),
-        );
-
-        this.createTables(tables);
+        const { tables, statements } = createSqliteSchema(schema);
+        const sqlScript = statements.join('\n');
+        alasql(sqlScript);
 
         const steps = tables.length + 1;
         let step = 1;
@@ -40,24 +38,13 @@ export class Alasql implements Database {
         }
     }
 
-    private createTables(tables: TableSchema[]): void {
-        for (const table of tables) {
-            const columnDefs = table.columns.map(col => `\`${col.name}\` ${col.type}`).join(', ');
-            alasql(`DROP TABLE IF EXISTS \`${table.key}\`;`);
-            const createTableSQL = `CREATE TABLE \`${table.key}\` (${columnDefs});`;
-            alasql(createTableSQL);
-        }
-
-        // TODO references + indexes
-    }
-
     private insertTableData(table: TableSchema, data: DatasourceData): void {
         const tableData = data.relational[table.key];
         if (!tableData)
             throw new Error(`No data found for table "${table.key}".`);
 
-        const columnDefs = table.columns.map(() => '?').join(', ');
-        const insert = alasql.compile(`INSERT INTO \`${table.key}\` VALUES (${columnDefs});`);
+        console.log(`[${this.type}] Inserting data into "${table.key}"`, tableData.length);
+        const insert = alasql.compile(createPreparedInsertStatement(table));
 
         for (const row of tableData)
             insert(csvRowToSql(row, table.columns));

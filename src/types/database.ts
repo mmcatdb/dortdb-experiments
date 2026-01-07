@@ -14,6 +14,8 @@ export type Database = {
     getDefaultQuery(): string;
 
     getExamples?(): ExampleQuery[];
+
+    explain?(sql: string, defaultLanguage?: DortdbLanguage): Result<PlanNode>;
 };
 
 export type DortdbLanguage = 'sql' | 'cypher' | 'xquery';
@@ -60,6 +62,11 @@ export function rowsToObjects(columns: string[], rows: SqlRow[]): SqlTuple[] {
 
     return objects;
 }
+
+export type PlanNode = {
+    label: string;
+    children: PlanNode[];
+};
 
 export type Result<T> = {
     status: true;

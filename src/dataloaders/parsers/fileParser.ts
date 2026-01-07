@@ -25,3 +25,4 @@ export function parseSimpleFile(stream: FileStream, fileSchema: SimpleFileSchema
         return parseNdjson(stream);
     }
 }
+

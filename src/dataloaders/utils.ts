@@ -16,6 +16,7 @@ export async function* iterStream<T>(stream: ReadableStream<T>) {
 
 export async function toArray<T>(iter: AsyncIterable<T>): Promise<T[]> {
     const arr: T[] = [];
+
     for await (const item of iter)
         arr.push(item);
 
