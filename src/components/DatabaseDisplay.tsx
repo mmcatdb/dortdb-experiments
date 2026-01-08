@@ -218,12 +218,12 @@ function ToggleExpandButton({ result, setResult }: QueryResultDisplayProps) {
         return null;
 
     return result.isExpanded ? (
-        <Button variant='outline' onClick={() => setResult({ ...result, isExpanded: true })}>
-            {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
-        </Button>
-    ) : (
         <Button variant='outline' onClick={() => setResult({ ...result, isExpanded: false })}>
             Show less
+        </Button>
+    ) : (
+        <Button variant='outline' onClick={() => setResult({ ...result, isExpanded: true })}>
+            {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
         </Button>
     );
 }
