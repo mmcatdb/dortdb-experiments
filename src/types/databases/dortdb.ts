@@ -1,4 +1,4 @@
-import { type Result, successResult, type Database, type SqlTuple, errorResult, type ExampleQuery, type DortdbLanguage, type PlanNode } from '../database';
+import { type Result, successResult, type Database, errorResult, type ExampleQuery, type DortdbLanguage, type PlanNode, type QueryOutputObject, type QueryOutput } from '../database';
 import { ASTIdentifier, datetime, DortDB, MapIndex, type PlanVisitor, type PlanOperator, allAttrs, type Aliased } from '@dortdb/core';
 import * as plan from '@dortdb/core/plan';
 import { defaultRules } from '@dortdb/core/optimizer';
@@ -59,9 +59,22 @@ export class Dortdb implements Database {
         this.innerDb.registerSource([ tableName ], data);
     }
 
-    query(sql: string, defaultLanguage?: DortdbLanguage): Result<SqlTuple[]> {
+    query(sql: string, defaultLanguage?: DortdbLanguage): Result<QueryOutput> {
         try {
-            return successResult(this.innerDb.query<SqlTuple>(sql, defaultLanguage && { mainLang: defaultLanguage }).data);
+            const { data, schema } = this.innerDb.query<QueryOutputObject>(sql, defaultLanguage && { mainLang: defaultLanguage });
+
+            let columns = schema ?? [ 'value' ];
+            // Let's just say this string comparison is highly not ideal, but it's not our fault.
+            if (columns.length === 1 && columns[0] === allAttrs.toString()) {
+                // Expand * to all columns in the first row.
+                columns = data.length > 0 ? Object.keys(data[0]) : [];
+            }
+
+            const rows: QueryOutputObject[] = schema
+                ? data
+                : data.map(value => ({ value }));
+
+            return successResult({ columns, rows });
         }
         catch (error) {
             return errorResult(error);
@@ -100,7 +113,8 @@ const examples: ExampleQuery[] = [ {
     name: 'Query 1',
     defaultLanguage: 'sql',
     query: `
--- all data about CUSTOMER
+-- Query 1.
+-- For a given customer, find his/her all related data including profile, orders, invoices, feedback, comments, and posts in the last month, return the category in which he/she has bought the largest number of products, and return the tag of the customer posts which he/she has engaged with the greatest times.
 --
 -- one such customer id is 4145
 

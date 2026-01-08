@@ -1,7 +1,7 @@
-import { type Result, rowsToObjects, successResult, type Database, type SqlTuple, errorResult, csvRowToSql, type ExampleQuery, type PlanNode } from '../database';
+import { type Result, rowsToObjects, successResult, type Database, errorResult, csvRowToSql, type ExampleQuery, type PlanNode, type QueryOutput } from '../database';
 import initSqlJs from 'sql.js';
 import { type TableSchema, type DatasourceData, type DatasourceSchema } from '../schema';
-import { createPreparedInsertStatement, createSqliteSchema, type ExplainSqlTuple, queryPlanToTree } from '../sqlite';
+import { createPreparedInsertStatement, createSqliteSchema, type ExplainSqlObject, queryPlanToTree } from '../sqlite';
 
 const SQL = await initSqlJs({
     // Required to load the wasm binary asynchronously. Of course, you can host it wherever you want.
@@ -47,16 +47,18 @@ export class Sqljs implements Database {
         statement.free();
     }
 
-    query(sql: string): Result<SqlTuple[]> {
+    query(sql: string): Result<QueryOutput> {
         try {
             const result = this.innerDb.exec(sql);
-            // A list of results is returned (one for each statement executed). However, for some un-fucking-believable reason, if there are no columns, the result is skipped.
+            // A list of results is returned (one for each statement executed). However, for some un-fucking-believable reason, if there are no rows, the result is skipped.
             // Unbelievable.
             if (result.length === 0)
-                return successResult([]);
+                return successResult({ columns: [], rows: [] });
 
             const { columns, values } = result[0];
-            return successResult(rowsToObjects(columns, values));
+            const rows = rowsToObjects(columns, values);
+
+            return successResult({ columns, rows });
         }
         catch (error) {
             return errorResult(error);
@@ -79,7 +81,7 @@ export class Sqljs implements Database {
                 return errorResult('No EXPLAIN output.');
 
             const { columns, values } = result[0];
-            const plan = queryPlanToTree(rowsToObjects(columns, values) as ExplainSqlTuple[]);
+            const plan = queryPlanToTree(rowsToObjects(columns, values) as ExplainSqlObject[]);
             return successResult(plan);
         }
         catch (error) {
@@ -97,14 +99,39 @@ LIMIT 2
 export const sqlQueryExamples: ExampleQuery[] = [ {
     name: 'Query 1',
     query: `
--- all data about CUSTOMER
+-- Query 1.
+-- For a given customer, find his/her all related data including profile, orders, invoices, feedback, comments, and posts in the last month, return the category in which he/she has bought the largest number of products, and return the tag of the customer posts which he/she has engaged with the greatest times.
 --
 -- one such customer id is 4145
 
--- TODO Not sure how to query multiple results at once ...
-
-SELECT *
-FROM customers WHERE id = 4145
+SELECT
+    json_object(
+        'id', customers.id,
+        'firstName', customers.firstName,
+        'lastName', customers.lastName
+    ) AS profile,
+    json_group_array(json_object(
+        'orderId', orders.OrderId,
+        'totalPrice', orders.totalPrice,
+        'orderlines', json(aggregated_orderlines.orderlines)
+    )) AS orders
+FROM customers
+LEFT JOIN orders ON orders.PersonId = customers.id
+LEFT JOIN (
+    SELECT
+        json_group_array(json_object(
+            'productId', Orderline.productId,
+            'asin', Orderline.asin,
+            'title', Orderline.title,
+            'price', Orderline.price,
+            'brand', Orderline.brand
+        )) as orderlines,
+        Orderline.OrderId AS order_id
+    FROM Orderline
+    GROUP BY Orderline.OrderId
+) AS aggregated_orderlines ON aggregated_orderlines.order_id = orders.OrderId
+WHERE customers.id = 4145
+GROUP BY customers.id;
     `,
 }, {
     name: 'Query 2 - in',

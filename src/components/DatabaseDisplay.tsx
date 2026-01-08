@@ -1,5 +1,5 @@
-import { type Dispatch, useId, useMemo, useState } from 'react';
-import type { Database, DortdbLanguage, ExampleQuery, PlanNode, Result, SqlTuple } from '@/types/database';
+import { type Dispatch, Fragment, useId, useMemo, useState } from 'react';
+import type { Database, DortdbLanguage, ExampleQuery, PlanNode, QueryOutput, QueryOutputValue, Result } from '@/types/database';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
 import { ChevronDownIcon } from 'lucide-react';
 import { plural, timeQuantity } from './utils';
@@ -35,8 +35,10 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
         const end = performance.now();
         const executionTimeMs = end - start;
 
+        console.log('Query output:', output);
+
         if (output.status)
-            console.log(`Query success: ${output.data.length} rows in ${executionTimeMs} ms`);
+            console.log(`Query success: ${output.data.rows.length} rows in ${executionTimeMs} ms`);
         else
             console.log('Query error:', output.error);
 
@@ -134,7 +136,7 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
 
 type QueryResult = {
     type: 'query';
-    output: Result<SqlTuple[]>;
+    output: Result<QueryOutput>;
     executionTimeMs: number;
     isExpanded?: boolean;
 };
@@ -185,36 +187,63 @@ type QueryResultDisplayProps = {
 };
 
 function QueryResultDisplay({ result, setResult }: QueryResultDisplayProps) {
+    const { output, executionTimeMs, isExpanded } = result;
+
     return (
         <div className='mt-2 space-y-1'>
             <div className='flex items-baseline gap-4'>
                 <h3 className='text-md font-semibold'>Result:</h3>
 
-                {result.output.status && (
+                {output.status && (
                     <div className='text-sm font-medium text-muted-foreground'>
                         {/* Tenths of milliseconds is probably the best we can do here. */}
-                        {`${result.output.data.length} ${plural(result.output.data.length, 'row')} in ${timeQuantity.prettyPrint(result.executionTimeMs)}`}
+                        {`${output.data.rows.length} ${plural(output.data.rows.length, 'row')} in ${timeQuantity.prettyPrint(executionTimeMs)}`}
                     </div>
                 )}
             </div>
 
-            {result.output.status ? (<>
-                {(result.isExpanded ? result.output.data : result.output.data.slice(0, NOT_EXPANDED_ROWS)).map((row, index) => (
-                    <pre key={index} className='px-2 py-1 rounded-md bg-accent text-sm text-wrap'>
-                        {JSON.stringify(row, null, 4)}
-                    </pre>
-                ))}
+            {output.status ? (<>
+                <div className='grid gap-1' style={{ gridTemplateColumns: `repeat(${output.data.columns.length}, minmax(0, max-content))` }}>
+
+                    {output.data.rows.length > 0 && output.data.columns.map((column, index) => (
+                        <div key={index} className='px-2 py-1 rounded-md bg-accent/50 font-mono text-sm font-semibold truncate'>
+                            {column}
+                        </div>
+                    ))}
+
+                    {(isExpanded ? output.data.rows : output.data.rows.slice(0, NOT_EXPANDED_ROWS)).map((row, rowIndex) => (
+                        <Fragment key={rowIndex}>
+                            {output.data.columns.map((column, colIndex) => (
+                                <pre key={colIndex} className='px-2 py-1 rounded-md bg-accent text-sm text-wrap truncate'>
+                                    {stringifyQueryOutputValue(row[column])}
+                                </pre>
+                            ))}
+                        </Fragment>
+                    ))}
+                </div>
 
                 <ToggleExpandButton result={result} setResult={setResult} />
             </>) : (
-                <ErrorDisplay error={result.output.error} />
+                <ErrorDisplay error={output.error} />
             )}
         </div>
     );
 }
 
+function stringifyQueryOutputValue(value: QueryOutputValue): string {
+    switch (typeof value) {
+    case 'string':
+        return value;
+    case 'number':
+    case 'boolean':
+        return value.toString();
+    default:
+        return JSON.stringify(value);
+    }
+}
+
 function ToggleExpandButton({ result, setResult }: QueryResultDisplayProps) {
-    if (!result.output.status ||result.output.data.length <= NOT_EXPANDED_ROWS)
+    if (!result.output.status || result.output.data.rows.length <= NOT_EXPANDED_ROWS)
         return null;
 
     return result.isExpanded ? (
@@ -223,7 +252,7 @@ function ToggleExpandButton({ result, setResult }: QueryResultDisplayProps) {
         </Button>
     ) : (
         <Button variant='outline' onClick={() => setResult({ ...result, isExpanded: true })}>
-            {`Show all ${result.output.data.length} ${plural(result.output.data.length, 'row')}`}
+            {`Show all ${result.output.data.rows.length} ${plural(result.output.data.rows.length, 'row')}`}
         </Button>
     );
 }

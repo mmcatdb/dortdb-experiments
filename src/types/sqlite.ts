@@ -100,14 +100,14 @@ export function createPreparedInsertStatement(table: TableSchema): string {
     return `INSERT INTO ${escape(table.key)} VALUES (${columnDefs});`;
 }
 
-export type ExplainSqlTuple = {
+export type ExplainSqlObject = {
     id: number;
     parent: number;
     notused: number;
     detail: string;
 };
 
-export function queryPlanToTree(rows: ExplainSqlTuple[]): PlanNode {
+export function queryPlanToTree(rows: ExplainSqlObject[]): PlanNode {
     const root: PlanNode = {
         label: 'QUERY PLAN',
         children: [],

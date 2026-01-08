@@ -9,7 +9,7 @@ export type Database = {
      */
     setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void>;
 
-    query(sql: string, defaultLanguage?: DortdbLanguage): Result<SqlTuple[]>;
+    query(sql: string, defaultLanguage?: DortdbLanguage): Result<QueryOutput>;
 
     getDefaultQuery(): string;
 
@@ -26,9 +26,18 @@ export type ExampleQuery = {
     defaultLanguage?: DortdbLanguage;
 };
 
+
 export type SqlRow = SqlValue[];
-export type SqlTuple = Record<string, SqlValue>;
+export type SqlObject = Record<string, SqlValue>;
 export type SqlValue = number | string | Uint8Array | null;
+
+export type QueryOutput = {
+    columns: string[];
+    rows: QueryOutputObject[];
+};
+
+export type QueryOutputObject = { [key: string]: QueryOutputValue };
+export type QueryOutputValue = SqlValue | Date | QueryOutputObject | QueryOutputValue[] | null;
 
 export function csvRowToSql(row: CsvRow, columns: ColumnDef[]): SqlRow {
     const sqlRow: SqlRow = new Array(columns.length);
@@ -48,11 +57,11 @@ export function csvRowToSql(row: CsvRow, columns: ColumnDef[]): SqlRow {
     return sqlRow;
 }
 
-export function rowsToObjects(columns: string[], rows: SqlRow[]): SqlTuple[] {
-    const objects: SqlTuple[] = [];
+export function rowsToObjects(columns: string[], rows: SqlRow[]): SqlObject[] {
+    const objects: SqlObject[] = [];
 
     for (const row of rows) {
-        const object: SqlTuple = {};
+        const object: SqlObject = {};
 
         for (let i = 0; i < columns.length; i++)
             object[columns[i]] = row[i];
@@ -61,6 +70,21 @@ export function rowsToObjects(columns: string[], rows: SqlRow[]): SqlTuple[] {
     }
 
     return objects;
+}
+
+export function objectsToRows(columns: string[], objects: SqlObject[]): SqlRow[] {
+    const rows: SqlRow[] = [];
+
+    for (const object of objects) {
+        const row: SqlRow = [];
+
+        for (const column of columns)
+            row.push(object[column]);
+
+        rows.push(row);
+    }
+
+    return rows;
 }
 
 export type PlanNode = {

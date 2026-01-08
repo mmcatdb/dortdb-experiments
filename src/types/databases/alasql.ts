@@ -1,4 +1,4 @@
-import { type Result, successResult, type Database, type SqlTuple, errorResult, csvRowToSql, type ExampleQuery } from '../database';
+import { type Result, successResult, type Database, type SqlObject, errorResult, csvRowToSql, type ExampleQuery, type QueryOutput } from '../database';
 import alasqlRaw from 'alasql';
 import { type DatasourceData, type DatasourceSchema, type TableSchema } from '../schema';
 import { sqlQueryExamples } from './sqljs';
@@ -50,10 +50,13 @@ export class Alasql implements Database {
             insert(csvRowToSql(row, table.columns));
     }
 
-    query(sql: string): Result<SqlTuple[]> {
+    query(sql: string): Result<QueryOutput> {
         try {
             alasql.use(this.innerDbId);
-            return successResult(alasql<SqlTuple[]>(sql));
+            const rows = alasql<SqlObject[]>(sql);
+            const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+            return successResult({ columns, rows });
         }
         catch (error) {
             return errorResult(error);
