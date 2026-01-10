@@ -367,7 +367,7 @@ SELECT
     SUM(orders.TotalPrice) monetary,
     ARRAY(
         SELECT feedback FROM feedback
-        WHERE personId = orders.PersonId
+        WHERE personId = orders.PersonId::number
         LIMIT 10
     ) recentReviews
 FROM orders JOIN (
@@ -378,7 +378,7 @@ FROM orders JOIN (
     ORDER BY postCount DESC LIMIT 10
     MATCH (cust)-[:hasInterest]->(tag)
     RETURN cust.id AS custId, collect(tag.id) AS interests
-) topPosters
+    ) topPosters
 ON orders.PersonId = topPosters.custId
 GROUP BY orders.PersonId, topPosters.interests
     `,
@@ -452,6 +452,15 @@ class OperatorToPlanNodeConverter implements PlanVisitor<PlanNode>, XQueryPlanVi
             op.mapping,
         );
     };
+    visitBidirectionalRecursion(operator: plan.BidirectionalRecursion) {
+        return this.draw(`bidirectionalRecursion(${operator.min}, ${operator.max})`,
+            operator.mappingRev,
+            operator.source,
+            operator.target,
+            operator.mappingFwd,
+        );
+    }
+
     visitProjection(op: operators.Projection) {
         const attributes = op.attrs.map(a => this.attribute(a)).join(', ');
         return this.draw(`projection(${attributes})`,

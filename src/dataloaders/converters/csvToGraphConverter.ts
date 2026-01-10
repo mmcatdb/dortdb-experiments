@@ -1,5 +1,6 @@
 import { MultiDirectedGraph } from 'graphology';
 import { type GraphSchema, type EdgeSchema, type ParsedFileData, type CsvRow } from '@/types/schema';
+import { gaLabelsOrType } from '@dortdb/lang-cypher';
 
 export function convertCsvToGraph(input: ParsedFileData, schema: GraphSchema): MultiDirectedGraph {
     const graph = new MultiDirectedGraph();
@@ -28,26 +29,26 @@ function addEdgesForKind(input: ParsedFileData, indexCache: Record<string, Graph
         if (fromIndex) {
             if (!graph.hasNode(fromNodeId)) {
                 const fromRow = fromIndex.get(fromId) ?? { id: fromId };
-                fromRow.labels = [ from.label ];
+                fromRow[gaLabelsOrType] = [ from.label ];
                 graph.addNode(fromNodeId, fromRow);
             }
         }
         else {
-            graph.mergeNode(fromNodeId, { id: fromId, labels: [ from.label ] });
+            graph.updateNode(fromNodeId, (node: GraphNode) => updateNode(node, fromId, from.label));
         }
 
         if (toIndex) {
             if (!graph.hasNode(toNodeId)) {
                 const toRow = toIndex.get(toId) ?? { id: toId };
-                toRow.labels = [ to.label ];
+                toRow[gaLabelsOrType] = [ to.label ];
                 graph.addNode(toNodeId, toRow);
             }
         }
         else {
-            graph.mergeNode(toNodeId, { id: toId, labels: [ to.label ] });
+            graph.updateNode(toNodeId, (node: GraphNode) => updateNode(node, toId, to.label));
         }
 
-        const edgeData: CsvRow = { type: key };
+        const edgeData: CsvRow = { [gaLabelsOrType]: key };
         for (const col of props)
             edgeData[col] = row[col];
 
@@ -55,11 +56,20 @@ function addEdgesForKind(input: ParsedFileData, indexCache: Record<string, Graph
     }
 }
 
+function updateNode(node: GraphNode, id: GraphId, label: string) {
+    const oldLabels: string[] = node[gaLabelsOrType] ?? [];
+    return {
+        ...node,
+        id,
+        [gaLabelsOrType]: oldLabels.includes(label) ? oldLabels : [ ...oldLabels, label ],
+    };
+}
+
 export type GraphIndex = Map<GraphId, GraphNode>;
 
 type GraphId = string | number;
 
-export type GraphNode = CsvRow & { id?: GraphId, labels?: string[] };
+export type GraphNode = CsvRow & { id?: GraphId, [gaLabelsOrType]?: string[] };
 
 function getTableIndex(input: ParsedFileData, indexCache: Record<string, GraphIndex>, key: string, column: string): GraphIndex | undefined {
     if (!(key in input))
