@@ -103,6 +103,7 @@ export const sqlQueryExamples: ExampleQuery[] = [ {
 -- For a given customer, find his/her all related data including profile, orders, invoices, feedback, comments, and posts in the last month, return the category in which he/she has bought the largest number of products, and return the tag of the customer posts which he/she has engaged with the greatest times.
 --
 -- one such customer id is 4145
+-- FIXME the query is still not according to the description
 
 SELECT
     json_object(
@@ -110,29 +111,102 @@ SELECT
         'firstName', customers.firstName,
         'lastName', customers.lastName
     ) AS profile,
-    json_group_array(json_object(
-        'orderId', orders.OrderId,
-        'totalPrice', orders.totalPrice,
-        'orderlines', json(aggregated_orderlines.orderlines)
-    )) AS orders
+    customer_orders.content AS orders,
+    customer_feedback.content AS feedback,
+    customer_posts.content AS posts
 FROM customers
-LEFT JOIN orders ON orders.PersonId = customers.id
-LEFT JOIN (
+
+JOIN (
     SELECT
+        orders.PersonId AS customer_id,
         json_group_array(json_object(
-            'productId', Orderline.productId,
-            'asin', Orderline.asin,
-            'title', Orderline.title,
-            'price', Orderline.price,
-            'brand', Orderline.brand
-        )) as orderlines,
-        Orderline.OrderId AS order_id
-    FROM Orderline
-    GROUP BY Orderline.OrderId
-) AS aggregated_orderlines ON aggregated_orderlines.order_id = orders.OrderId
+            'orderId', orders.OrderId,
+            'totalPrice', orders.totalPrice,
+            'orderlines', json(order_orderlines.orderlines)
+        )) AS content
+        FROM orders
+        LEFT JOIN (
+            SELECT
+                Orderline.OrderId AS order_id,
+                json_group_array(json_object(
+                    'productId', Orderline.productId,
+                    'asin', Orderline.asin,
+                    'title', Orderline.title,
+                    'price', Orderline.price,
+                    'brand', Orderline.brand
+                )) AS orderlines
+            FROM Orderline
+            JOIN orders ON orders.OrderId = Orderline.OrderId
+            GROUP BY Orderline.OrderId
+        ) AS order_orderlines ON order_orderlines.order_id = orders.OrderId
+        GROUP BY orders.PersonId
+) AS customer_orders ON customer_orders.customer_id = customers.id
+
+JOIN (
+    SELECT
+        feedback.personId AS customer_id,
+        json_group_array(json_object(
+            'asin', feedback.productAsin,
+            'feedback', feedback.feedback
+        )) AS content
+    FROM feedback
+    GROUP BY feedback.personId
+) AS customer_feedback ON customer_feedback.customer_id = customers.id
+
+JOIN (
+    SELECT
+        hasCreator.PersonId AS customer_id,
+        json_group_array(json_object(
+            'id', posts.id,
+            'imageFile', posts.imageFile,
+            'creationDate', posts.creationDate,
+            'locationIP', posts.locationIP,
+            'browserUsed', posts.browserUsed,
+            'language', posts.language,
+            'content', posts.content,
+            'length', posts.length
+        )) AS content
+    FROM hasCreator
+    JOIN posts ON posts.id = hasCreator.PostId
+    GROUP BY hasCreator.PersonId
+) AS customer_posts ON customer_posts.customer_id = customers.id
+
 WHERE customers.id = 4145
-GROUP BY customers.id;
     `,
+
+    // Variant with correlated subqueries is several times slower in sql.js:
+    // SELECT
+    //   ...,
+    //   (SELECT json_group_array(...) FROM orders WHERE PersonId = c.id),
+    //   (SELECT json_group_array(...) FROM feedback WHERE personId = c.id),
+    //   ...
+    // FROM customers c
+    // WHERE c.id = 4145;
+
+
+    // TODO a possible alternative if we only care about getting the data, not the aggregation:
+    // SELECT *
+    // FROM customers
+    // WHERE customers.id = 4145;
+
+    // SELECT *
+    // FROM orders
+    // WHERE orders.PersonId = 4145;
+
+    // SELECT Orderline.*
+    // FROM Orderline
+    // JOIN orders ON orders.OrderId = Orderline.OrderId
+    // WHERE orders.PersonId = 4145;
+
+    // SELECT *
+    // FROM feedback
+    // WHERE feedback.personId = 4145;
+
+    // SELECT posts.*
+    // FROM posts
+    // JOIN hasCreator ON hasCreator.PostId = posts.id
+    // WHERE hasCreator.PersonId = 4145;
+
 }, {
     name: 'Query 2 - in',
     query: `

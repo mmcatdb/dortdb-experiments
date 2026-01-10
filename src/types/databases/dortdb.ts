@@ -117,6 +117,7 @@ const examples: ExampleQuery[] = [ {
 -- For a given customer, find his/her all related data including profile, orders, invoices, feedback, comments, and posts in the last month, return the category in which he/she has bought the largest number of products, and return the tag of the customer posts which he/she has engaged with the greatest times.
 --
 -- one such customer id is 4145
+-- FIXME omit post labels
 
 SELECT
     ROW(customers.id AS id, customers.firstName AS firstName, customers.lastName AS lastName) profile,

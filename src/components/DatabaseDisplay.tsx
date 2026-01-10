@@ -1,8 +1,8 @@
-import { type Dispatch, Fragment, useId, useMemo, useState } from 'react';
-import type { Database, DortdbLanguage, ExampleQuery, PlanNode, QueryOutput, QueryOutputValue, Result } from '@/types/database';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, Textarea } from './shadcn';
-import { ChevronDownIcon } from 'lucide-react';
-import { plural, timeQuantity } from './utils';
+import { type Dispatch, useId, useMemo, useState } from 'react';
+import { stringifyQueryOutputObject, type Database, type DortdbLanguage, type ExampleQuery, type PlanNode, type QueryOutput, type Result } from '@/types/database';
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, ScrollArea, Textarea } from './shadcn';
+import { CheckIcon, ChevronDownIcon, CopyIcon } from 'lucide-react';
+import { cn, plural, prettyPrintInt, timeQuantity } from './utils';
 import { updateUI } from '@/dataloaders/utils';
 
 type DatabaseDisplayProps = {
@@ -189,21 +189,35 @@ type QueryResultDisplayProps = {
 function QueryResultDisplay({ result, setResult }: QueryResultDisplayProps) {
     const { output, executionTimeMs, isExpanded } = result;
 
+    const stringifiedRows = useMemo(() => {
+        if (!output.status)
+            return;
+
+        const rows = isExpanded ? output.data.rows : output.data.rows.slice(0, NOT_EXPANDED_ROWS);
+        return rows.map(row => stringifyQueryOutputObject(row));
+    }, [ output, isExpanded ]);
+
     return (
         <div className='mt-2 space-y-1'>
             <div className='flex items-baseline gap-4'>
                 <h3 className='text-md font-semibold'>Result:</h3>
 
-                {output.status && (
+                {output.status && (<>
                     <div className='text-sm font-medium text-muted-foreground'>
                         {/* Tenths of milliseconds is probably the best we can do here. */}
                         {`${output.data.rows.length} ${plural(output.data.rows.length, 'row')} in ${timeQuantity.prettyPrint(executionTimeMs)}`}
                     </div>
-                )}
+
+                    {stringifiedRows!.length > 0 && (
+                        <div className='text-sm font-medium text-muted-foreground'>
+                            {prettyPrintInt(stringifiedRows![0].length)} characters shown
+                        </div>
+                    )}
+                </>)}
             </div>
 
             {output.status ? (<>
-                <div className='grid gap-1' style={{ gridTemplateColumns: `repeat(${output.data.columns.length}, minmax(0, max-content))` }}>
+                {/* <div className='grid gap-1' style={{ gridTemplateColumns: `repeat(${output.data.columns.length}, minmax(0, max-content))` }}>
 
                     {output.data.rows.length > 0 && output.data.columns.map((column, index) => (
                         <div key={index} className='px-2 py-1 rounded-md bg-accent/50 font-mono text-sm font-semibold truncate'>
@@ -220,7 +234,16 @@ function QueryResultDisplay({ result, setResult }: QueryResultDisplayProps) {
                             ))}
                         </Fragment>
                     ))}
-                </div>
+                </div> */}
+
+                {stringifiedRows!.map((row, index) => (
+                    <ScrollArea key={index} className='max-h-100 flex flex-col rounded-md bg-accent'>
+                        <pre key={index} className='px-2 py-1 text-sm text-wrap'>
+                            {row}
+                        </pre>
+                        <CopyToClipboardButton text={row} className='absolute top-2 right-2' />
+                    </ScrollArea>
+                ))}
 
                 <ToggleExpandButton result={result} setResult={setResult} />
             </>) : (
@@ -230,16 +253,25 @@ function QueryResultDisplay({ result, setResult }: QueryResultDisplayProps) {
     );
 }
 
-function stringifyQueryOutputValue(value: QueryOutputValue): string {
-    switch (typeof value) {
-    case 'string':
-        return value;
-    case 'number':
-    case 'boolean':
-        return value.toString();
-    default:
-        return JSON.stringify(value);
+function CopyToClipboardButton({ text, className }: { text: string, className?: string }) {
+    const [ isCopied, setIsCopied ] = useState(false);
+
+    async function copy() {
+        try {
+            await navigator.clipboard.writeText(text);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 10_000);
+        }
+        catch (error) {
+            console.error('Failed to copy to clipboard:', error);
+        }
     }
+
+    return (
+        <Button variant='outline' className={cn('size-9', className)} onClick={copy}>
+            {isCopied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+        </Button>
+    );
 }
 
 function ToggleExpandButton({ result, setResult }: QueryResultDisplayProps) {

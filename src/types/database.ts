@@ -1,4 +1,4 @@
-import { type ColumnDef, ColumnType, type CsvRow, type DatasourceData, type DatasourceSchema } from './schema';
+import { type ColumnDef, ColumnType, type CsvRow, type DatasourceData, type DatasourceSchema, type JsonObject, type JsonValue } from './schema';
 
 export type Database = {
     readonly type: string;
@@ -106,4 +106,47 @@ export function successResult<T>(data: T): Result<T> {
 
 export function errorResult<T>(error: unknown): Result<T> {
     return { status: false, error };
+}
+
+export function stringifyQueryOutputObject(object: QueryOutputObject): string {
+    // The point is to parse all top-level JSON strings and then stringify the whole object again.
+    // We don't expect nested JSON strings here.
+    const toJson: Record<string, unknown> = {};
+
+    for (const [ key, value ] of Object.entries(object)) {
+        toJson[key] = typeof value === 'string'
+            ? parseJsonIfNeeded(value) ?? value
+            : value;
+    }
+
+    return JSON.stringify(toJson, null, 4);
+}
+
+function parseJsonIfNeeded(value: string): JsonObject | JsonValue[] | undefined {
+    if (
+        (value.length < 2) ||
+        (value[0] !== '{' && value[0] !== '[') ||
+        (value[value.length - 1] !== '}' && value[value.length - 1] !== ']')
+    )
+        return undefined;
+
+    try {
+        const parsed = JSON.parse(value);
+        return (typeof parsed === 'object' && parsed !== null) ? parsed : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+export function stringifyQueryOutputValue(value: QueryOutputValue): string {
+    switch (typeof value) {
+    case 'string':
+        return value;
+    case 'number':
+    case 'boolean':
+        return value.toString();
+    default:
+        return JSON.stringify(value);
+    }
 }
