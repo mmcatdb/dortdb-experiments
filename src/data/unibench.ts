@@ -170,7 +170,7 @@ const ordersDocumentTables: DocumentTablesSchema = {
             key: 'Orderline',
             name: 'Orderline',
             columns: [
-                { name: 'productId', type: ColumnType.int },
+                { name: 'productId', type: ColumnType.int, references: { key: 'products', column: 'productId', isDuplicatedKey: true } },
                 { name: 'asin', type: ColumnType.string, isPrimaryKey: true, references: { key: 'products', column: 'asin' } },
                 { name: 'title', type: ColumnType.string },
                 { name: 'price', type: ColumnType.float },
@@ -186,7 +186,7 @@ const ordersDocumentTables: DocumentTablesSchema = {
 export const unibenchSample: DatasourceSchema = {
     label: 'Unibench Sample',
     file: {
-        path: 'https://data.mmcatdb.com/unibench.zip',
+        path: 'https://data.mmcatdb.com/Unibench-0.2.sample.zip',
         type: 'zip',
         files,
     },
@@ -210,9 +210,11 @@ export const unibenchSample: DatasourceSchema = {
     multimodelOnly: [ {
         type: 'document',
         key: 'invoices',
+        // TODO Why no index here?
     }, {
         type: 'document',
         key: 'orders',
+        indexes: [ 'PersonId::number' ],
     }, {
         type: 'graph',
         key: 'defaultGraph',
@@ -275,6 +277,6 @@ export const unibenchFull: DatasourceSchema = {
     label: 'Unibench Full',
     file: {
         ...unibenchSample.file,
-        path: 'https://data.mmcatdb.com/unibench-full.zip',
+        path: 'https://data.mmcatdb.com/Unibench-0.2.zip',
     },
 };

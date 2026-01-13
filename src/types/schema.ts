@@ -80,14 +80,14 @@ export type ColumnDef = {
     references?: {
         key: string;
         column: string;
+        /**
+         * Because unibench data is even worse than we were able to imagine in our darkest nightmares.
+         * And alasql is buggy af.
+         * Use whenever the referenced column isn't a primary key but it behaves like one (i.e., is unique).
+         */
+        isDuplicatedKey?: boolean;
     };
-
-    // TODO
-    // indexes: {
-    //     name: string;
-    //     columns: string[];
-    //     unique: boolean;
-    // }[];
+    isUnique?: boolean;
 };
 
 export enum ColumnType {
@@ -139,7 +139,7 @@ type NodeSource = {
 export type DocumentSchema = {
     type: 'document';
     key: string;
-    table?: DocumentTable;
+    indexes?: string[];
 };
 
 export type DocumentTablesSchema = {

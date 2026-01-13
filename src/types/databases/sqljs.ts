@@ -20,7 +20,7 @@ export class Sqljs implements Database {
     }
 
     async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
-        const { tables, statements } = createSqliteSchema(schema);
+        const { tables, statements } = createSqliteSchema(schema, 'sqlite');
         const sqlScript = statements.join('\n');
         this.innerDb.run(sqlScript);
 
@@ -70,7 +70,7 @@ export class Sqljs implements Database {
     }
 
     getExamples(): ExampleQuery[] {
-        return sqlQueryExamples;
+        return queryExamples;
     }
 
     explain(sql: string): Result<PlanNode> {
@@ -96,14 +96,16 @@ SELECT * FROM customers
 LIMIT 2
 `.trim();
 
-export const sqlQueryExamples: ExampleQuery[] = [ {
+const queryExamples: ExampleQuery[] = [ {
     name: 'Query 1',
     query: `
--- Query 1.
+-- Query 1
 -- For a given customer, find his/her all related data including profile, orders, invoices, feedback, comments, and posts in the last month, return the category in which he/she has bought the largest number of products, and return the tag of the customer posts which he/she has engaged with the greatest times.
+-- We don't filter by time here since the data is static.
+-- We also don't find the most used category/tag since we already return all.
+-- Lastly, invoices are just duplicated orders so we skip them as well.
 --
 -- one such customer id is 4145
--- FIXME the query is still not according to the description
 
 SELECT
     json_object(
@@ -114,6 +116,7 @@ SELECT
     customer_orders.content AS orders,
     customer_feedback.content AS feedback,
     customer_posts.content AS posts
+
 FROM customers
 
 JOIN (
@@ -121,8 +124,8 @@ JOIN (
         orders.PersonId AS customer_id,
         json_group_array(json_object(
             'orderId', orders.OrderId,
-            'totalPrice', orders.totalPrice,
-            'orderlines', json(order_orderlines.orderlines)
+            'orderline', json(order_orderlines.content),
+            'totalPrice', orders.totalPrice
         )) AS content
         FROM orders
         LEFT JOIN (
@@ -134,7 +137,7 @@ JOIN (
                     'title', Orderline.title,
                     'price', Orderline.price,
                     'brand', Orderline.brand
-                )) AS orderlines
+                )) AS content
             FROM Orderline
             JOIN orders ON orders.OrderId = Orderline.OrderId
             GROUP BY Orderline.OrderId
@@ -208,8 +211,9 @@ WHERE customers.id = 4145
     // WHERE hasCreator.PersonId = 4145;
 
 }, {
-    name: 'Query 2 - in',
+    name: 'Query 2 - IN',
     query: `
+-- Query 2 - IN
 -- customers which bought PRODUCT and posted about it
 -- using IN, the fastest in sql.js
 --
@@ -232,8 +236,9 @@ AND customers.id IN (
 )
     `,
 }, {
-    name: 'Query 2 - join',
+    name: 'Query 2 - JOIN (slow)',
     query: `
+-- Query 2 - JOIN (slow)
 -- customers which bought PRODUCT and posted about it
 -- using JOIN and GROUP BY, kinda slow in sql.js
 --
@@ -251,8 +256,9 @@ AND Orderline.productId = 52
 GROUP BY customers.id
     `,
 }, {
-    name: 'Query 2 - exists',
+    name: 'Query 2 - EXISTS (slow)',
     query: `
+-- Query 2 - EXISTS (slow)
 -- customers which bought PRODUCT and posted about it
 -- using EXISTS, extremely slow in sql.js
 --
@@ -277,8 +283,9 @@ AND EXISTS (
 )
     `,
 }, {
-    name: 'Query 3',
+    name: 'Query 3 - IN',
     query: `
+-- Query 3 - IN
 -- customers which posted about PRODUCT and left negative feedback
 --
 -- the only such product in the dataset is 202
@@ -298,54 +305,134 @@ AND customers.id IN (
 )
     `,
 }, {
+    name: 'Query 3 - JOIN',
+    query: `
+-- Query 3 - JOIN
+-- customers which posted about PRODUCT and left negative feedback
+--
+-- the only such product in the dataset is 202
+
+SELECT DISTINCT customers.id, feedback.feedback, products.productId
+FROM customers
+JOIN feedback ON customers.id = feedback.personId
+JOIN products ON feedback.productAsin = products.asin
+JOIN (
+    SELECT DISTINCT hasCreator.PersonId, hasTag.TagId AS productId
+    FROM hasTag
+    JOIN posts ON posts.id = hasTag.PostId
+    JOIN hasCreator ON hasCreator.PostId = posts.id
+) AS tagged_posts ON tagged_posts.PersonId = customers.id
+    AND tagged_posts.productId = products.productId
+WHERE products.productId = 202
+AND CAST(SUBSTR(feedback.feedback, 2, INSTR(feedback.feedback, ',') - 2) AS REAL) < 3
+    `,
+}, {
+    name: 'Query 3 - EXISTS',
+    query: `
+-- Query 3 - EXISTS
+-- customers which posted about PRODUCT and left negative feedback
+--
+-- the only such product in the dataset is 202
+
+SELECT customers.id, feedback.feedback, products.productId
+FROM customers
+JOIN feedback ON customers.id = feedback.personId
+JOIN products ON feedback.productAsin = products.asin
+WHERE products.productId = 202
+AND CAST(SUBSTR(feedback.feedback, 2, INSTR(feedback.feedback, ',') - 2) AS REAL) < 3
+AND EXISTS (
+    SELECT 1
+    FROM hasTag
+    JOIN posts ON posts.id = hasTag.PostId
+    JOIN hasCreator ON hasCreator.PostId = posts.id
+    WHERE hasCreator.PersonId = customers.id
+    AND hasTag.TagId = products.productId
+)
+    `,
+}, {
     name: 'Query 4',
     query: `
--- TODO
--- Includes graph paths with variable lengths so I think we can pass on this one.
+-- Query 4
+-- three-hop common friends of the two top spenders
+--
+-- these two are actually not connected in the sample data
+
+WITH
+top_two AS (
+    SELECT PersonId
+    FROM orders
+    GROUP BY PersonId
+    ORDER BY SUM(TotalPrice) DESC
+    LIMIT 2
+),
+
+p1 AS (
+    SELECT PersonId AS id
+    FROM top_two
+    LIMIT 1 OFFSET 0
+),
+
+p2 AS (
+    SELECT PersonId AS id
+    FROM top_two
+    LIMIT 1 OFFSET 1
+),
+
+-- people reachable FROM p1 within 3 hops
+reachable_from_p1 AS (
+    WITH RECURSIVE rf(id, depth) AS (
+        SELECT p1.id, 0
+        FROM p1
+        UNION ALL
+        SELECT knows."to", rf.depth + 1
+        FROM rf
+        JOIN knows ON knows."from" = rf.id
+        WHERE rf.depth < 3
+    )
+    SELECT DISTINCT id
+    FROM rf
+    WHERE depth > 0
+),
+
+-- people that can reach p2 within 3 hops
+reachable_to_p2 AS (
+    WITH RECURSIVE rt(id, depth) AS (
+        SELECT p2.id, 0
+        FROM p2
+        UNION ALL
+        SELECT knows."from", rt.depth + 1
+        FROM rt
+        JOIN knows ON knows."to" = rt.id
+        WHERE rt.depth < 3
+    )
+    SELECT DISTINCT id
+    FROM rt
+    WHERE depth > 0
+)
+
+-- intersection (foaf)
+SELECT DISTINCT customers.id
+FROM customers
+JOIN reachable_from_p1 ON reachable_from_p1.id = customers.id
+JOIN reachable_to_p2   ON reachable_to_p2.id = customers.id;
     `,
 }, {
     name: 'Query 5',
     query: `
 -- what did the friends of CUSTOMER which bought BRAND products post about?
 --
--- example customer id: 4659
+-- example customer id: 6192
 -- example brand: Reebok
 
 SELECT TagId
 FROM hasTag
 JOIN hasCreator ON hasCreator.PostId = hasTag.PostId
-JOIN knows ON knows.\`to\` = hasCreator.PersonId
-JOIN orders ON orders.PersonId = knows.\`to\`
+JOIN knows ON knows."to" = hasCreator.PersonId
+JOIN orders ON orders.PersonId = knows."to"
 JOIN Orderline ON Orderline.OrderId = orders.OrderId
-WHERE knows.\`from\` = 4659
+WHERE knows."from" = 6192
 AND Orderline.brand = 'Reebok'
 GROUP BY TagId
-    `,
-}, {
-    name: 'Query 6',
-    query: `
--- TODO
--- Again, path query, skip.
-    `,
-}, {
-    name: 'Query 7',
-    query: `
--- TODO
-    `,
-}, {
-    name: 'Query 8',
-    query: `
--- TODO
-    `,
-}, {
-    name: 'Query 9',
-    query: `
--- TODO
-    `,
-}, {
-    name: 'Query 10',
-    query: `
--- TODO
     `,
 } ].map(example => ({
     name: example.name,

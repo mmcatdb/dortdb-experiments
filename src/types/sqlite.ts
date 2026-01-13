@@ -3,7 +3,7 @@ import { type ColumnDef, ColumnType, type DatasourceSchema, type TableSchema } f
 import { type PlanNode } from './database';
 
 /** Called *Type Affinity* in the docs. All other "types" are cast to one of these. */
-export enum SqliteColumnType {
+enum SqliteColumnType {
     text = 'text',
     numeric = 'numeric',
     integer = 'integer',
@@ -11,7 +11,7 @@ export enum SqliteColumnType {
     blob = 'blob',
 }
 
-export function columnTypeToSqlite(type: ColumnType): SqliteColumnType {
+function columnTypeToSqlite(type: ColumnType): SqliteColumnType {
     switch (type) {
     case ColumnType.string:
         return SqliteColumnType.text;
@@ -24,7 +24,9 @@ export function columnTypeToSqlite(type: ColumnType): SqliteColumnType {
     }
 }
 
-export function createSqliteSchema(schema: DatasourceSchema): { tables: TableSchema[], statements: string[] } {
+type SqlVariant = 'sqlite' | 'alasql';
+
+export function createSqliteSchema(schema: DatasourceSchema, variant: SqlVariant): { tables: TableSchema[], statements: string[] } {
     const statements: string[] = [];
 
     const unsortedTables = [ ...schema.common, ...schema.relationalOnly ].flatMap(
@@ -37,7 +39,7 @@ export function createSqliteSchema(schema: DatasourceSchema): { tables: TableSch
         statements.push(`DROP TABLE IF EXISTS ${escape(table.key)};`);
 
     for (const table of tables) {
-        statements.push(defineTable(table));
+        statements.push(defineTable(table, variant));
         statements.push(...defineTableIndexes(table));
     }
 
@@ -51,9 +53,9 @@ function sortTablesByDependencies(tables: TableSchema[]): TableSchema[] {
     }));
 }
 
-function defineTable(table: TableSchema): string {
+function defineTable(table: TableSchema, variant: SqlVariant): string {
     const tableCommands: string[] = [];
-    const columnDefs = table.columns.map(col => defineColumn(col));
+    const columnDefs = table.columns.map(col => defineColumn(col, variant));
     tableCommands.push(...columnDefs);
 
     const primaryKeys = table.columns.filter(col => col.isPrimaryKey).map(col => escape(col.name));
@@ -65,10 +67,19 @@ function defineTable(table: TableSchema): string {
     return `CREATE TABLE ${escape(table.key)} (\n${tableCommands.join(',\n')}\n);`;
 }
 
-function defineColumn(column: ColumnDef): string {
+function defineColumn(column: ColumnDef, variant: SqlVariant): string {
     let colDef = `${escape(column.name)} ${columnTypeToSqlite(column.type)}`;
-    if (column.references)
-        colDef += ` REFERENCES ${escape(column.references.key)}(${escape(column.references.column)})`;
+    // This is needed for references to non-primary key columns.
+    if (column.isUnique)
+        colDef += ' UNIQUE';
+    if (column.references) {
+        // Alasql can't handle references to non-primary key columns.
+        // Like we could create composite references, that would work fine, but let's just don't do that. Constraints are just more work without any performance benefits (like indexes).
+        // In the end, it's not our fault that unibench data is stupid.
+        const dontReferenceAndFuckAlasql = variant === 'alasql' && column.references.isDuplicatedKey;
+        if (!dontReferenceAndFuckAlasql)
+            colDef += ` REFERENCES ${escape(column.references.key)}(${escape(column.references.column)})`;
+    }
 
     return colDef;
 }
@@ -79,7 +90,8 @@ function defineTableIndexes(table: TableSchema): string[] {
     // According to the sqlite documentation, indexes on primary keys are created automatically.
     // Indexes on foreign keys are not but should be created manually.
     // https://www.sqlite.org/foreignkeys.html#fk_indexes:~:text=So%2C%20in%20most%20real%20systems%2C%20an%20index%20should%20be%20created%20on%20the%20child%20key%20columns%20of%20each%20foreign%20key%20constraint.
-    const indexedColumns = table.columns.filter(col => !col.isPrimaryKey && col.references);
+    // Unique indexes are also created automatically.
+    const indexedColumns = table.columns.filter(col => !col.isPrimaryKey && !col.isUnique && col.references);
     for (const column of indexedColumns)
         output.push(defineIndex(table, column));
 

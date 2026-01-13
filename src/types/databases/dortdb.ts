@@ -27,36 +27,43 @@ export class Dortdb implements Database {
     }
 
     async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
-        const tables = [ ...schema.common, ...schema.multimodelOnly ];
+        const kinds = [ ...schema.common, ...schema.multimodelOnly ];
 
-        for (const table of tables) {
-            const tableData = data.multimodel[table.key];
-            if (!tableData)
-                throw new Error(`No data found for table "${table.key}".`);
+        for (const kind of kinds) {
+            const kindData = data.multimodel[kind.key];
+            if (!kindData)
+                throw new Error(`No data found for kind "${kind.key}".`);
 
-            this.innerDb.registerSource([ table.key ], tableData);
+            this.innerDb.registerSource([ kind.key ], kindData);
         }
 
         await onProgress?.(1 / 2);
 
-        // FIXME This is specific for unibench data, make this more generic later.
-        this.innerDb.createIndex([ 'defaultGraph', 'nodes' ], [], ConnectionIndex);
-        this.innerDb.createIndex([ 'defaultGraph', 'nodes' ], [ 'x.id' ], MapIndex, { fromItemKey: [ 'x' ], mainLang: 'cypher' });
-        this.innerDb.createIndex([ 'defaultGraph', 'edges' ], [], ConnectionIndex);
-        this.innerDb.createIndex([ 'customers' ], [ 'id' ], MapIndex);
-        this.innerDb.createIndex([ 'products' ], [ 'productId' ], MapIndex);
-        this.innerDb.createIndex([ 'products' ], [ 'brand' ], MapIndex);
-        this.innerDb.createIndex([ 'products' ], [ 'asin' ], MapIndex);
-        this.innerDb.createIndex([ 'feedback' ], [ 'productAsin' ], MapIndex);
-        this.innerDb.createIndex([ 'brandProducts' ], [ 'brandName' ], MapIndex);
-        this.innerDb.createIndex([ 'brandProducts' ], [ 'productAsin' ], MapIndex);
-        this.innerDb.createIndex([ 'vendors' ], [ 'id' ], MapIndex);
-        this.innerDb.createIndex([ 'posts' ], [ 'id' ], MapIndex);
-        this.innerDb.createIndex([ 'orders' ], [ 'PersonId::number' ], MapIndex);
+        for (const kind of kinds) {
+            switch (kind.type) {
+            case 'table':
+                kind.columns
+                    .filter(col => col.isPrimaryKey || col.references || col.isUnique)
+                    .forEach(col => {
+                        this.innerDb.createIndex([ kind.key ], [ col.name ], MapIndex);
+                    });
+                break;
+            case 'document':
+                for (const index of kind.indexes ?? [])
+                    this.innerDb.createIndex([ kind.key ], [ index ], MapIndex);
+                break;
+            case 'graph': {
+                this.innerDb.createIndex([ kind.key, 'nodes' ], [], ConnectionIndex);
+                this.innerDb.createIndex([ kind.key, 'nodes' ], [ 'x.id' ], MapIndex, { fromItemKey: [ 'x' ], mainLang: 'cypher' });
+                this.innerDb.createIndex([ kind.key, 'edges' ], [], ConnectionIndex);
+                break;
+            }
+            }
+        }
     }
 
-    setRawData(tableName: string, data: unknown): void {
-        this.innerDb.registerSource([ tableName ], data);
+    setRawData(kindName: string, data: unknown): void {
+        this.innerDb.registerSource([ kindName ], data);
     }
 
     query(sql: string, defaultLanguage?: DortdbLanguage): Result<QueryOutput> {
@@ -113,11 +120,13 @@ const examples: ExampleQuery[] = [ {
     name: 'Query 1',
     defaultLanguage: 'sql',
     query: `
--- Query 1.
+-- Query 1
 -- For a given customer, find his/her all related data including profile, orders, invoices, feedback, comments, and posts in the last month, return the category in which he/she has bought the largest number of products, and return the tag of the customer posts which he/she has engaged with the greatest times.
+-- We don't filter by time here since the data is static.
+-- We also don't find the most used category/tag since we already return all.
+-- Lastly, invoices are just duplicated orders so we skip them as well.
 --
 -- one such customer id is 4145
--- FIXME omit post labels
 
 SELECT
     ROW(customers.id AS id, customers.firstName AS firstName, customers.lastName AS lastName) profile,
@@ -126,6 +135,7 @@ SELECT
     ARRAY(
         LANG cypher
         MATCH ({id: customers.id})<-[:hasCreator]-(post)
+        WHERE post.creationDate > date.sub(date('2011-12-31'), interval('1 month'))
         RETURN post
     ) posts
 FROM customers
@@ -135,6 +145,7 @@ WHERE id = 4145
     name: 'Query 2',
     defaultLanguage: 'sql',
     query: `
+-- Query 2
 -- customers which bought PRODUCT and posted about it
 --
 -- one such product id is 52
@@ -157,6 +168,7 @@ AND EXISTS (
     name: 'Query 3',
     defaultLanguage: 'sql',
     query: `
+-- Query 3
 -- customers which posted about PRODUCT and left negative feedback
 --
 -- the only such product in the dataset is 202
@@ -176,6 +188,7 @@ AND EXISTS (
     name: 'Query 4',
     defaultLanguage: 'cypher',
     query: `
+// Query 4
 // three-hop common friends of the two top spenders
 //
 // these two are actually not connected in the sample data
@@ -196,12 +209,13 @@ RETURN foaf
     name: 'Query 5',
     defaultLanguage: 'cypher',
     query: `
+// Query 5
 // what did the friends of CUSTOMER which bought BRAND products post about?
 //
-// example customer id: 4659
+// example customer id: 6192
 // example brand: Reebok
 
-MATCH (:person {id: 4659})-[:knows]->(person)<-[:hasCreator]-()-[:hasTag]->(tag)
+MATCH (:person {id: 6192})-[:knows]->(person)<-[:hasCreator]-()-[:hasTag]->(tag)
 WHERE EXISTS {
     LANG xquery
     $invoices/Invoices/Invoice.xml[PersonId=$person/@id]/Orderline[brand="Reebok"]
@@ -212,6 +226,7 @@ RETURN DISTINCT tag.id
     name: 'Query 6',
     defaultLanguage: 'sql',
     query: `
+-- Query 6
 -- find persons in the shortest path between CUSTOMERS and return their top 3 bestsellers
 --
 -- example customer ids: 4145, 4882
@@ -237,6 +252,7 @@ LIMIT 3
     name: 'Query 7',
     defaultLanguage: 'sql',
     query: `
+-- Query 7
 -- find negative feedback on BRAND products with decreasing sales
 --
 -- example brand name: Reebok
@@ -261,6 +277,7 @@ WHERE brandProducts.brandName = 'Reebok' AND feedback.feedback[1]::number < 4 AN
     name: 'Query 8',
     defaultLanguage: 'sql',
     query: `
+-- Query 8
 -- compute this year's total sales amount and social media popularity of
 -- products in CATEGORY
 --
@@ -311,6 +328,7 @@ FROM (
     name: 'Query 9',
     defaultLanguage: 'sql',
     query: `
+-- Query 9
 -- compare male and female customer ratio of top 3 vendors in COUNTRY and find latest posts about them
 --
 -- an example country is China
@@ -356,6 +374,7 @@ FROM (
     name: 'Query 10',
     defaultLanguage: 'sql',
     query: `
+-- Query 10
 -- find this year's top posters and get their recency/frequency/monetary statistics,
 -- their interests and their latest feedback
 
