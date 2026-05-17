@@ -1,84 +1,42 @@
-import { type Result, successResult, type Database, type SqlObject, errorResult, csvRowToSql, type ExampleQuery, type QueryOutput } from '../database';
-import alasqlRaw from 'alasql';
-import { type DatasourceData, type DatasourceSchema, type TableSchema } from '../schema';
-import { createPreparedInsertStatement, createSqliteSchema } from '../sqlite';
+import type { ExampleQuery } from '@/types/database';
 
-// This is ugly but alasql uses commonjs modules and interface augmentation doesn't work.
-type AlaSQL = typeof alasqlRaw & {
-    compile<T = unknown>(sql: string): (...params: any[]) => T;
-};
+export const unibenchExamples: ExampleQuery[] = [ {
+    name: 'Custom 1',
+    query: `
+-- Custom Query 1
 
-const alasql = alasqlRaw as AlaSQL;
-
-export class Alasql implements Database {
-    readonly type = 'AlaSQL';
-    static nextId = 0;
-    private readonly innerDbId: string;
-
-    constructor() {
-        this.innerDbId = 'db-' + Alasql.nextId++;
-        // Kinda not ideal but the inner typings of alasql are beyond insanity.
-        new alasql.Database(this.innerDbId);
-    }
-
-    async setData(schema: DatasourceSchema, data: DatasourceData, onProgress?: (progress: number) => Promise<void>): Promise<void> {
-        alasql.use(this.innerDbId);
-
-        const { tables, statements } = createSqliteSchema(schema, 'alasql');
-        const sqlScript = statements.join('\n');
-        alasql(sqlScript);
-
-        const steps = tables.length + 1;
-        let step = 1;
-
-        for (const table of tables) {
-            await onProgress?.(step++ / steps);
-            this.insertTableData(table, data);
-        }
-    }
-
-    private insertTableData(table: TableSchema, data: DatasourceData): void {
-        const tableData = data.relational[table.key];
-        if (!tableData)
-            throw new Error(`No data found for table "${table.key}".`);
-
-        console.log(`[${this.type}] Inserting data into "${table.key}"`, tableData.length);
-        const insert = alasql.compile(createPreparedInsertStatement(table));
-
-        for (const row of tableData)
-            insert(csvRowToSql(row, table.columns));
-    }
-
-    query(sql: string): Result<QueryOutput> {
-        try {
-            alasql.use(this.innerDbId);
-            const rows = alasql<SqlObject[]>(sql);
-            const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
-
-            return successResult({ columns, rows });
-        }
-        catch (error) {
-            return errorResult(error);
-        }
-    }
-
-    getDefaultQuery(): string {
-        return defaultQuery;
-    }
-
-    getExamples(): ExampleQuery[] {
-        // Not sure whether this is correct, sqljs has a little different escaping.
-        return queryExamples;
-    }
-}
-
-const defaultQuery = `
--- Retrieve all records from the customers table
-SELECT * FROM customers
-LIMIT 2
-`.trim();
-
-export const queryExamples: ExampleQuery[] = [ {
+WITH RECURSIVE
+  friends(friendId, distance, weight) AS (
+    SELECT
+      f.[to] AS friendId,
+      1 AS distance,
+      1.0 AS weight
+    FROM knows AS f
+    WHERE f.[from]=32985348843745
+    UNION ALL
+    SELECT
+      f.[to] AS friendId,
+      x.distance+1 AS distance,
+      x.weight*0.5 AS weight
+    FROM friends as x, knows AS f
+    WHERE f.[from]=x.friendId
+    )
+SELECT
+  feedback.productAsin AS product,
+  COUNT(*) AS feedbackCnt,
+--SUM(CAST(substr(feedback.feedback,2,3) AS NUMERIC) * friends.weight) AS feedbackSum,
+--SUM(friends.weight) AS weightSum,
+  SUM(CAST(substr(feedback.feedback,2,3) AS NUMERIC) * friends.weight) / SUM(friends.weight) AS feedbackAvg,
+  SUM((CAST(substr(feedback.feedback,2,3) AS NUMERIC) - 3) * friends.weight) AS feedbackTotal
+FROM
+  friends,
+  feedback
+WHERE feedback.personId=friends.friendId
+GROUP BY feedback.productAsin
+ORDER BY SUM((CAST(substr(feedback.feedback,2,3) AS NUMERIC) - 3) * friends.weight) DESC
+;
+    `,
+}, {
     name: 'Query 1',
     query: `
 -- Query 1

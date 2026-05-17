@@ -1,4 +1,4 @@
-import { type ColumnDef, ColumnType, type CsvRow, type DatasourceData, type DatasourceSchema, type JsonObject, type JsonValue } from './schema';
+import { type ColumnDef, ColumnType, type CsvRow, type DatasourceData, type DatasourceSchema, type JsonObject, type JsonValue, type SchemaType } from './schema';
 
 export type Database = {
     readonly type: string;
@@ -13,19 +13,20 @@ export type Database = {
 
     getDefaultQuery(): string;
 
-    getExamples?(): ExampleQuery[];
+    getExamples?(): ExampleQueries;
 
     explain?(sql: string, defaultLanguage?: DortdbLanguage): Result<PlanNode>;
 };
 
 export type DortdbLanguage = 'sql' | 'cypher' | 'xquery';
 
+export type ExampleQueries = Record<SchemaType, ExampleQuery[]>;
+
 export type ExampleQuery = {
     name: string;
     query: string;
     defaultLanguage?: DortdbLanguage;
 };
-
 
 export type SqlRow = SqlValue[];
 export type SqlObject = Record<string, SqlValue>;

@@ -1,4 +1,4 @@
-import { type DocumentTable, type SimpleFileSchema, type TableSchema } from '@/types/schema';
+import type { DocumentTable, SimpleFileSchema, TableSchema } from '@/types/schema';
 
 export function copyTableDef(files: SimpleFileSchema[], key: string): TableSchema {
     const file = files.find(f => f.key === key);

@@ -185,6 +185,7 @@ const ordersDocumentTables: DocumentTablesSchema = {
 
 export const unibenchSample: DatasourceSchema = {
     label: 'Unibench Sample',
+    type: 'unibench',
     file: {
         path: 'https://data.mmcatdb.com/Unibench-0.2.sample.zip',
         type: 'zip',

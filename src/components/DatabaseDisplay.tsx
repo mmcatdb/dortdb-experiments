@@ -1,16 +1,18 @@
 import { type Dispatch, useId, useMemo, useState } from 'react';
-import { stringifyQueryOutputObject, type Database, type DortdbLanguage, type ExampleQuery, type PlanNode, type QueryOutput, type Result } from '@/types/database';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, ScrollArea, Textarea } from './shadcn';
+import { type ExampleQueries, stringifyQueryOutputObject, type Database, type DortdbLanguage, type ExampleQuery, type PlanNode, type QueryOutput, type Result } from '@/types/database';
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, ScrollArea, Textarea } from './shadcn';
 import { CheckIcon, ChevronDownIcon, CopyIcon } from 'lucide-react';
 import { cn, plural, prettyPrintInt, timeQuantity } from './utils';
 import { updateUI } from '@/dataloaders/utils';
+import { type SchemaType } from '@/types/schema';
 
 type DatabaseDisplayProps = {
     db: Database;
+    schemaLabels: Record<SchemaType, string>;
     className?: string;
 };
 
-export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
+export function DatabaseDisplay({ db, schemaLabels, className }: DatabaseDisplayProps) {
     const [ query, setQuery ] = useState(db.getDefaultQuery());
     const [ defaultLanguage, setDefaultLanguage ] = useState<DortdbLanguage>('sql');
 
@@ -111,7 +113,7 @@ export function DatabaseDisplay({ db, className }: DatabaseDisplayProps) {
                 <Button variant='outline' onClick={executeQuery} disabled={isExecuting}>Execute</Button>
 
                 {examples && (
-                    <ExampleSelect options={examples} onSelect={selectExample} />
+                    <ExampleSelect options={examples} onSelect={selectExample} schemaLabels={schemaLabels} />
                 )}
 
                 {db.explain && (
@@ -156,11 +158,12 @@ function errorToString(error: unknown): string {
 }
 
 type ExampleSelectProps = {
-    options: ExampleQuery[];
+    options: ExampleQueries;
     onSelect: Dispatch<ExampleQuery>;
+    schemaLabels: Record<SchemaType, string>;
 };
 
-function ExampleSelect({ options, onSelect }: ExampleSelectProps) {
+function ExampleSelect({ options, onSelect, schemaLabels }: ExampleSelectProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -169,10 +172,17 @@ function ExampleSelect({ options, onSelect }: ExampleSelectProps) {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-                {options.map(example => (
-                    <DropdownMenuItem key={example.name} onClick={() => onSelect(example)}>
-                        {example.name}
-                    </DropdownMenuItem>
+                {Object.entries(options).map(([ schemaType, examples ]) => (
+                    <DropdownMenuGroup key={schemaType} className='group'>
+                        <DropdownMenuLabel className='opacity-60'>{schemaLabels[schemaType]}</DropdownMenuLabel>
+
+                        {examples.map(example => (
+                            <DropdownMenuItem key={example.name} onClick={() => onSelect(example)} className='pl-4'>
+                                {example.name}
+                            </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator className='group-last:hidden' />
+                    </DropdownMenuGroup>
                 ))}
             </DropdownMenuContent>
         </DropdownMenu>

@@ -1,6 +1,9 @@
 import { type MultiDirectedGraph } from 'graphology';
 
+export type SchemaType = string;
+
 export type DatasourceSchema = {
+    type: SchemaType;
     label: string;
     file: FileSchema;
     /** Kinds that should be used in both relational and multimodel databases. */
