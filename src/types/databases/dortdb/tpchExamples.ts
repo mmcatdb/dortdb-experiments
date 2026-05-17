@@ -14,8 +14,10 @@ export const tpchExamples: ExampleQuery[] = [ {
 
 select
     s.acctbal as acctbal,
-    s.name as \`s.name\`,
-    n.name as \`n.name\`,
+--    s.name as \`s.name\`,
+    s.name as s_name,
+--    n.name as \`n.name\`,
+    n.name as n_name,
     p.partkey as partkey,
     p.mfgr as mfgr,
     s.address as address,
