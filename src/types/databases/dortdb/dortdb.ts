@@ -1,5 +1,6 @@
 import { type Result, successResult, type Database, errorResult, type DortdbLanguage, type PlanNode, type QueryOutputObject, type QueryOutput, type ExampleQueries } from '../../database';
-import { datetime, DortDB, MapIndex, allAttrs } from '@dortdb/core';
+import { DortDB, MapIndex, allAttrs } from '@dortdb/core';
+import { datetime } from '@dortdb/datetime';
 import { defaultRules } from '@dortdb/core/optimizer';
 import { SQL } from '@dortdb/lang-sql';
 import { ConnectionIndex, Cypher } from '@dortdb/lang-cypher';
@@ -24,6 +25,7 @@ export class Dortdb implements Database {
                 rules: defaultRules,
             },
             extensions: [ datetime ],
+            executor: { hashJoinIndices: [ MapIndex ] },
         });
     }
 
