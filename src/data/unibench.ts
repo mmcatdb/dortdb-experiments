@@ -183,14 +183,8 @@ const ordersDocumentTables: DocumentTablesSchema = {
     },
 };
 
-export const unibenchSample: DatasourceSchema = {
-    label: 'Unibench Sample',
+const commonSchema: Omit<DatasourceSchema, 'label' | 'file'> = {
     type: 'unibench',
-    file: {
-        path: 'https://data.mmcatdb.com/Unibench-0.2.sample.zip',
-        type: 'zip',
-        files,
-    },
     common: [
         copyTableDef(files, 'customers'),
         copyTableDef(files, 'feedback'),
@@ -273,11 +267,17 @@ export const unibenchSample: DatasourceSchema = {
     } ],
 };
 
-export const unibenchFull: DatasourceSchema = {
-    ...unibenchSample,
-    label: 'Unibench Full',
+const commonPrefix = 'https://data.mmcatdb.com/unibench/';
+
+export const unibench: DatasourceSchema[] = [
+    { label: 'Sample', filename: 'Unibench-0.2.sample.zip' },
+    { label: 'Full', filename: 'Unibench-0.2.zip' },
+].map(({ label, filename }) => ({
+    ...commonSchema,
+    label: `Unibench ${label}`,
     file: {
-        ...unibenchSample.file,
-        path: 'https://data.mmcatdb.com/Unibench-0.2.zip',
+        path: commonPrefix + filename,
+        type: 'zip',
+        files,
     },
-};
+}));

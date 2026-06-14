@@ -2,12 +2,12 @@ import { ColumnType, type CsvParseOptions, type DatasourceSchema, type SimpleFil
 import { copyTableDef } from './utils';
 
 const csvOptions: CsvParseOptions = {
-    separator: '|',
-    hasHeader: false,
+    separator: ',',
+    hasHeader: true,
 };
 
 const files: SimpleFileSchema[] = [ {
-    path: 'customer.tbl',
+    path: 'customer.csv',
     type: 'csv',
     key: 'customer',
     columns: [
@@ -22,7 +22,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'lineitem.tbl',
+    path: 'lineitem.csv',
     type: 'csv',
     key: 'lineitem',
     columns: [
@@ -45,7 +45,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'nation.tbl',
+    path: 'nation.csv',
     type: 'csv',
     key: 'nation',
     columns: [
@@ -56,7 +56,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'orders.tbl',
+    path: 'orders.csv',
     type: 'csv',
     key: 'orders',
     columns: [
@@ -72,7 +72,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'part.tbl',
+    path: 'part.csv',
     type: 'csv',
     key: 'part',
     columns: [
@@ -88,7 +88,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'partsupp.tbl',
+    path: 'partsupp.csv',
     type: 'csv',
     key: 'partsupp',
     columns: [
@@ -100,7 +100,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'region.tbl',
+    path: 'region.csv',
     type: 'csv',
     key: 'region',
     columns: [
@@ -110,7 +110,7 @@ const files: SimpleFileSchema[] = [ {
     ],
     csvOptions,
 }, {
-    path: 'supplier.tbl',
+    path: 'supplier.csv',
     type: 'csv',
     key: 'supplier',
     columns: [
@@ -125,14 +125,8 @@ const files: SimpleFileSchema[] = [ {
     csvOptions,
 } ];
 
-export const tpch: DatasourceSchema = {
-    label: 'TPC-H',
+const commonSchema: Omit<DatasourceSchema, 'label' | 'file'> = {
     type: 'tpch',
-    file: {
-        path: 'https://data.mmcatdb.com/tpch.zip',
-        type: 'zip',
-        files,
-    },
     common: [
         copyTableDef(files, 'customer'),
         copyTableDef(files, 'lineitem'),
@@ -150,3 +144,17 @@ export const tpch: DatasourceSchema = {
         // tpch is only relational for now
     ],
 };
+
+const commonPrefix = 'https://data.mmcatdb.com/tpch/';
+
+export const tpch: DatasourceSchema[] = [
+    '0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5',
+].map(scale => ({
+    ...commonSchema,
+    label: `TPC-H ${scale}`,
+    file: {
+        path: `${commonPrefix}tpch-${scale}.zip`,
+        type: 'zip',
+        files,
+    },
+}));

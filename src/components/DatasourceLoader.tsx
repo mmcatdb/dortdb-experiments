@@ -1,28 +1,31 @@
-import { Button } from './shadcn';
+import { Button, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from './shadcn';
 import { loadDatasource, type Progress } from '@/dataloaders';
 import { type Database } from '@/types/database';
-import { useState } from 'react';
+import { type Dispatch, useState } from 'react';
 import { CheckIcon, TriangleAlertIcon } from 'lucide-react';
-import { type DatasourceData, type DatasourceSchema } from '@/types/schema';
+import { type SchemaType, type DatasourceSchema } from '@/types/schema';
 import { updateUI } from '@/dataloaders/utils';
 
 type DatasourceLoaderProps = {
-    schema: DatasourceSchema;
+    schemas: DatasourceSchemas;
+    loadedSchema: DatasourceSchema | undefined;
+    setLoadedSchema: Dispatch<DatasourceSchema>;
     dbs: Database[];
-    onLoaded?: () => void;
+    schemaLabels: Record<SchemaType, string>;
 };
 
-export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProps) {
-    const [ data, setData ] = useState<DatasourceData>();
+type DatasourceSchemas = Record<SchemaType, DatasourceSchema[]>;
+
+export function DatasourceLoader({ schemas, loadedSchema, setLoadedSchema, dbs, schemaLabels }: DatasourceLoaderProps) {
+    const [ schema, setSchema ] = useState<DatasourceSchema>(Object.values(schemas)[0][0]);
     const [ isLoading, setIsLoading ] = useState(false);
     const [ progress, setProgress ] = useState<Progress>();
 
     async function loadData() {
         console.log(`Loading ${schema.label} data (${schema.file.path}) ...`);
-
         setIsLoading(true);
-        const result = await loadDatasource(schema, setProgress);
-        // console.log('Data loaded', result);
+
+        const data = await loadDatasource(schema, setProgress);
         console.log('Data loaded');
 
         for (const db of dbs) {
@@ -31,7 +34,7 @@ export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProp
             setProgress({ process, done: 0 });
             await updateUI();
 
-            await db.setData(schema, result, done => {
+            await db.setData(schema, data, done => {
                 setProgress({ process, done });
                 return updateUI();
             });
@@ -40,14 +43,17 @@ export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProp
         }
 
         setIsLoading(false);
-        setData(result);
-        onLoaded?.();
+        setLoadedSchema(schema);
     };
+
+    const isLoaded = loadedSchema === schema;
 
     return (
         <div className='flex items-center gap-4'>
-            <Button onClick={loadData} disabled={!!data || isLoading}>
-                Load {schema.label} Data
+            <SchemaSelect schemas={schemas} schema={schema} onSelect={setSchema} schemaLabels={schemaLabels} />
+
+            <Button onClick={loadData} disabled={isLoaded || isLoading}>
+                Load Data
             </Button>
 
             {isLoading ? (
@@ -61,9 +67,9 @@ export function DatasourceLoader({ schema, dbs, onLoaded }: DatasourceLoaderProp
                         <div>{printProgress(progress)}</div>
                     )}
                 </div>
-            ) : data ? (
+            ) : isLoaded ? (
                 <div className='flex items-center gap-2 text-green-500'>
-                    <CheckIcon /> {`${schema.label} data loaded`}
+                    <CheckIcon /> Data loaded
                 </div>
             ) : (
                 <div className='flex items-center gap-3 text-yellow-500'>
@@ -80,4 +86,45 @@ function printProgress(progress: Progress) {
         output += ` ${(progress.done * 100).toFixed(0).padStart(3, ' ')} %`;
 
     return output;
+}
+
+type ExampleSelectProps = {
+    schemas: DatasourceSchemas;
+    schema: DatasourceSchema;
+    onSelect: Dispatch<DatasourceSchema>;
+    schemaLabels: Record<SchemaType, string>;
+};
+
+function SchemaSelect({ schemas, schema, onSelect, schemaLabels }: ExampleSelectProps) {
+    function selectSchema(label: string) {
+        for (const variants of Object.values(schemas)) {
+            const found = variants.find(v => v.label === label);
+            if (found) {
+                onSelect(found);
+                return;
+            }
+        }
+    }
+
+    return (
+        <Select value={schema.label} onValueChange={selectSchema}>
+            <SelectTrigger>
+                <SelectValue placeholder='Select a datasource' />
+            </SelectTrigger>
+            <SelectContent>
+                {Object.entries(schemas).map(([ schemaType, variants ]) => (
+                    <SelectGroup key={schemaType} className='group'>
+                        <SelectLabel className='text-muted-foreground'>{schemaLabels[schemaType]}</SelectLabel>
+
+                        {variants.map(variant => (
+                            <SelectItem key={variant.label} value={variant.label} className='pl-4'>
+                                {variant.label}
+                            </SelectItem>
+                        ))}
+                        <SelectSeparator className='group-last:hidden' />
+                    </SelectGroup>
+                ))}
+            </SelectContent>
+        </Select>
+    );
 }

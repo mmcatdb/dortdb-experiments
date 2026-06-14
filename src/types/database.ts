@@ -13,7 +13,7 @@ export type Database = {
 
     getDefaultQuery(): string;
 
-    getExamples?(): ExampleQueries;
+    getExamples(): ExampleQueries;
 
     explain?(sql: string, defaultLanguage?: DortdbLanguage): Result<PlanNode>;
 };

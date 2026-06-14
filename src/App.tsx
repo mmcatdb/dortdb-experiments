@@ -1,13 +1,13 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { Dortdb } from './types/databases/dortdb/dortdb';
 import { DatabaseDisplay } from './components/DatabaseDisplay';
 import { Sqljs } from './types/databases/sqljs/sqljs';
 import { Alasql } from './types/databases/alasql/alasql';
 import { DatasourceLoader } from './components/DatasourceLoader';
-import { unibenchFull, unibenchSample } from './data/unibench';
-import { Label, Switch } from './components/shadcn';
-import type { SchemaType } from './types/schema';
+import type { DatasourceSchema, SchemaType } from './types/schema';
+import { unibench } from './data/unibench';
 import { tpch } from './data/tpch';
+import { ExperimentsRunner } from './components/ExperimentsRunner';
 
 export function App() {
     // Although we could create the databases as global singletons, this is more react-friendly and works correctly with hot-reloading.
@@ -17,38 +17,29 @@ export function App() {
         new Alasql(),
     ]);
 
-    const [ isLoaded, setIsLoaded ] = useState(false);
-    const [ isFull, setIsFull ] = useState(false);
-    const isFullId = useId();
-
+    const [ loadedSchema, setLoadedSchema ] = useState<DatasourceSchema>();
 
     return (<>
         <div className='mx-auto max-w-6xl py-12 space-y-8'>
-            <div className='space-y-2'>
-                <div className='flex items-center gap-4'>
-                    <DatasourceLoader schema={isFull ? unibenchFull : unibenchSample} dbs={dbs} onLoaded={() => setIsLoaded(true)} />
+            <DatasourceLoader schemas={schemas} loadedSchema={loadedSchema} setLoadedSchema={setLoadedSchema} dbs={dbs} schemaLabels={schemaLabels} />
 
-                    {!isLoaded && (
-                        <Label htmlFor={isFullId} className='ml-auto cursor-pointer flex items-center gap-2'>
-                            <Switch id={isFullId} checked={isFull} onCheckedChange={setIsFull} />
-                            <div>Use full dataset (takes like 10 minutes and 8 GB of RAM)</div>
-                        </Label>
-                    )}
-                </div>
+            <ExperimentsRunner dbs={dbs} schemaType={loadedSchema?.type} />
 
-                <DatasourceLoader schema={tpch} dbs={dbs} />
-            </div>
+            <DatabaseDisplay db={dbs[0]} loadedSchema={loadedSchema} schemaLabels={schemaLabels} />
 
-            <DatabaseDisplay db={dbs[0]} schemaLabels={schemaLabels} />
+            <DatabaseDisplay db={dbs[1]} loadedSchema={loadedSchema} schemaLabels={schemaLabels} />
 
-            <DatabaseDisplay db={dbs[1]} schemaLabels={schemaLabels} />
-
-            <DatabaseDisplay db={dbs[2]} schemaLabels={schemaLabels} />
+            <DatabaseDisplay db={dbs[2]} loadedSchema={loadedSchema} schemaLabels={schemaLabels} />
         </div>
     </>);
 }
 
+const schemas = {
+    [unibench[0].type]: unibench,
+    [tpch[0].type]: tpch,
+};
+
 const schemaLabels: Record<SchemaType, string> = {
-    [unibenchSample.type]: 'Unibench',
-    [tpch.type]: 'TPC-H',
+    [unibench[0].type]: 'Unibench',
+    [tpch[0].type]: 'TPC-H',
 };

@@ -1,18 +1,20 @@
 import { type Dispatch, useId, useMemo, useState } from 'react';
 import { type ExampleQueries, stringifyQueryOutputObject, type Database, type DortdbLanguage, type ExampleQuery, type PlanNode, type QueryOutput, type Result } from '@/types/database';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Label, RadioGroup, RadioGroupItem, ScrollArea, Textarea } from './shadcn';
-import { CheckIcon, ChevronDownIcon, CopyIcon } from 'lucide-react';
-import { cn, plural, prettyPrintInt, timeQuantity } from './utils';
+import { ChevronDownIcon } from 'lucide-react';
+import { plural, prettyPrintInt, timeQuantity } from './utils';
 import { updateUI } from '@/dataloaders/utils';
-import { type SchemaType } from '@/types/schema';
+import { type DatasourceSchema, type SchemaType } from '@/types/schema';
+import { CopyToClipboardButton } from './Common';
 
 type DatabaseDisplayProps = {
     db: Database;
+    loadedSchema: DatasourceSchema | undefined;
     schemaLabels: Record<SchemaType, string>;
     className?: string;
 };
 
-export function DatabaseDisplay({ db, schemaLabels, className }: DatabaseDisplayProps) {
+export function DatabaseDisplay({ db, loadedSchema, schemaLabels, className }: DatabaseDisplayProps) {
     const [ query, setQuery ] = useState(db.getDefaultQuery());
     const [ defaultLanguage, setDefaultLanguage ] = useState<DortdbLanguage>('sql');
 
@@ -113,7 +115,7 @@ export function DatabaseDisplay({ db, schemaLabels, className }: DatabaseDisplay
                 <Button variant='outline' onClick={executeQuery} disabled={isExecuting}>Execute</Button>
 
                 {examples && (
-                    <ExampleSelect options={examples} onSelect={selectExample} schemaLabels={schemaLabels} />
+                    <ExampleSelect options={examples} onSelect={selectExample} loadedSchema={loadedSchema} schemaLabels={schemaLabels} />
                 )}
 
                 {db.explain && (
@@ -160,10 +162,11 @@ function errorToString(error: unknown): string {
 type ExampleSelectProps = {
     options: ExampleQueries;
     onSelect: Dispatch<ExampleQuery>;
+    loadedSchema: DatasourceSchema | undefined;
     schemaLabels: Record<SchemaType, string>;
 };
 
-function ExampleSelect({ options, onSelect, schemaLabels }: ExampleSelectProps) {
+function ExampleSelect({ options, onSelect, loadedSchema, schemaLabels }: ExampleSelectProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -174,7 +177,13 @@ function ExampleSelect({ options, onSelect, schemaLabels }: ExampleSelectProps) 
             <DropdownMenuContent>
                 {Object.entries(options).map(([ schemaType, examples ]) => (
                     <DropdownMenuGroup key={schemaType} className='group'>
-                        <DropdownMenuLabel className='opacity-60'>{schemaLabels[schemaType]}</DropdownMenuLabel>
+                        <DropdownMenuLabel className='text-muted-foreground'>
+                            {schemaLabels[schemaType]}
+
+                            {schemaType !== loadedSchema?.type && (
+                                <span className='ml-2 text-xs text-destructive'>(not loaded)</span>
+                            )}
+                        </DropdownMenuLabel>
 
                         {examples.map(example => (
                             <DropdownMenuItem key={example.name} onClick={() => onSelect(example)} className='pl-4'>
@@ -227,25 +236,6 @@ function QueryResultDisplay({ result, setResult }: QueryResultDisplayProps) {
             </div>
 
             {output.status ? (<>
-                {/* <div className='grid gap-1' style={{ gridTemplateColumns: `repeat(${output.data.columns.length}, minmax(0, max-content))` }}>
-
-                    {output.data.rows.length > 0 && output.data.columns.map((column, index) => (
-                        <div key={index} className='px-2 py-1 rounded-md bg-accent/50 font-mono text-sm font-semibold truncate'>
-                            {column}
-                        </div>
-                    ))}
-
-                    {(isExpanded ? output.data.rows : output.data.rows.slice(0, NOT_EXPANDED_ROWS)).map((row, rowIndex) => (
-                        <Fragment key={rowIndex}>
-                            {output.data.columns.map((column, colIndex) => (
-                                <pre key={colIndex} className='px-2 py-1 rounded-md bg-accent text-sm text-wrap truncate'>
-                                    {stringifyQueryOutputValue(row[column])}
-                                </pre>
-                            ))}
-                        </Fragment>
-                    ))}
-                </div> */}
-
                 {stringifiedRows!.map((row, index) => (
                     <ScrollArea key={index} className='max-h-100 flex flex-col rounded-md bg-accent'>
                         <pre key={index} className='px-2 py-1 text-sm text-wrap'>
@@ -260,27 +250,6 @@ function QueryResultDisplay({ result, setResult }: QueryResultDisplayProps) {
                 <ErrorDisplay error={output.error} />
             )}
         </div>
-    );
-}
-
-function CopyToClipboardButton({ text, className }: { text: string, className?: string }) {
-    const [ isCopied, setIsCopied ] = useState(false);
-
-    async function copy() {
-        try {
-            await navigator.clipboard.writeText(text);
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 10_000);
-        }
-        catch (error) {
-            console.error('Failed to copy to clipboard:', error);
-        }
-    }
-
-    return (
-        <Button variant='outline' className={cn('size-9', className)} onClick={copy}>
-            {isCopied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-        </Button>
     );
 }
 
