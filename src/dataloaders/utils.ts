@@ -47,3 +47,16 @@ export function streamWithProgress(onProgress: (bytesRead: number) => void) {
 export function updateUI(): Promise<void> {
     return new Promise(resolve => requestAnimationFrame(() => resolve()));
 }
+
+export type Progress = {
+    process: string;
+    done?: number;
+};
+
+export function printProgress(progress: Progress) {
+    let output = `${progress.process} ...`;
+    if (progress.done !== undefined)
+        output += ` ${(progress.done * 100).toFixed(0).padStart(3, ' ')} %`;
+
+    return output;
+}

@@ -177,6 +177,7 @@ AND customers.id IN (
     `,
 }, {
     name: 'Query 2 - JOIN (slow)',
+    excludeFromTests: true,
     query: `
 -- Query 2 - JOIN (slow)
 -- customers which bought PRODUCT and posted about it
@@ -197,6 +198,7 @@ GROUP BY customers.id
     `,
 }, {
     name: 'Query 2 - EXISTS (slow)',
+    excludeFromTests: true,
     query: `
 -- Query 2 - EXISTS (slow)
 -- customers which bought PRODUCT and posted about it
@@ -378,4 +380,5 @@ GROUP BY TagId
     name: example.name,
     query: example.query.trim(),
     defaultLanguage: 'sql',
+    excludeFromTests: example.excludeFromTests,
 }));

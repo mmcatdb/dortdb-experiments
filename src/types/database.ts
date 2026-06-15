@@ -26,6 +26,8 @@ export type ExampleQuery = {
     name: string;
     query: string;
     defaultLanguage?: DortdbLanguage;
+    /** For queries that are too heavy to run in the experiments but are still useful as examples of how to query the databases. */
+    excludeFromTests?: boolean;
 };
 
 export type SqlRow = SqlValue[];

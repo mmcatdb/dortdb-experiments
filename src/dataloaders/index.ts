@@ -1,13 +1,8 @@
 import { convertKinds } from './converters/kindConverter';
 import { parseFile } from './parsers/fileParser';
 import { type DatasourceSchema, type DatasourceData } from '@/types/schema';
-import { streamWithProgress, updateUI } from './utils';
+import { type Progress, streamWithProgress, updateUI } from './utils';
 import { filterFile } from './fileFilter';
-
-export type Progress = {
-    process: string;
-    done?: number;
-};
 
 export async function loadDatasource(schema: DatasourceSchema, onProgress?: (progress: Progress) => void): Promise<DatasourceData> {
     onProgress?.({ process: 'Downloading' });

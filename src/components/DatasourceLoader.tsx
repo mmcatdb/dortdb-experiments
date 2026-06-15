@@ -1,10 +1,11 @@
 import { Button, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from './shadcn';
-import { loadDatasource, type Progress } from '@/dataloaders';
+import { loadDatasource } from '@/dataloaders';
 import { type Database } from '@/types/database';
 import { type Dispatch, useState } from 'react';
 import { CheckIcon, TriangleAlertIcon } from 'lucide-react';
 import { type SchemaType, type DatasourceSchema } from '@/types/schema';
-import { updateUI } from '@/dataloaders/utils';
+import { printProgress, type Progress, updateUI } from '@/dataloaders/utils';
+import { SpinnerIcon } from './Common';
 
 type DatasourceLoaderProps = {
     schemas: DatasourceSchemas;
@@ -58,10 +59,7 @@ export function DatasourceLoader({ schemas, loadedSchema, setLoadedSchema, dbs, 
 
             {isLoading ? (
                 <div className='flex items-center gap-3 text-blue-500'>
-                    <svg className='animate-spin size-5' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'>
-                        <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
-                        <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
-                    </svg>
+                    <SpinnerIcon />
 
                     {progress && (
                         <div>{printProgress(progress)}</div>
@@ -78,14 +76,6 @@ export function DatasourceLoader({ schemas, loadedSchema, setLoadedSchema, dbs, 
             )}
         </div>
     );
-}
-
-function printProgress(progress: Progress) {
-    let output = `${progress.process} ...`;
-    if (progress.done !== undefined)
-        output += ` ${(progress.done * 100).toFixed(0).padStart(3, ' ')} %`;
-
-    return output;
 }
 
 type ExampleSelectProps = {

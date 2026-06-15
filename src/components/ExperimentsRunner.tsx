@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { type Database, type ExampleQuery } from '@/types/database';
-import { Button, ScrollArea } from './shadcn';
-import { updateUI } from '@/dataloaders/utils';
+import { Button, Input, Label, ScrollArea } from './shadcn';
+import { printProgress, type Progress, updateUI } from '@/dataloaders/utils';
 import { type SchemaType } from '@/types/schema';
-import { CopyToClipboardButton } from './Common';
+import { CopyToClipboardButton, SpinnerIcon } from './Common';
+import { CheckIcon } from 'lucide-react';
 
 type ExperimentsRunnerProps = {
     dbs: Database[];
@@ -12,11 +13,16 @@ type ExperimentsRunnerProps = {
 };
 
 export function ExperimentsRunner({ dbs, schemaType, className }: ExperimentsRunnerProps) {
+    const [ rawExecutionsPerQuery, setRawExecutionsPerQuery ] = useState('40');
+    const executionsPerQuery = parseInt(rawExecutionsPerQuery, 10);
+    const isValidInput = !!schemaType && !isNaN(executionsPerQuery) && executionsPerQuery > 0;
+
     const [ isExecuting, setIsExecuting ] = useState(false);
+    const [ progress, setProgress ] = useState<Progress>();
     const [ results, setResults ] = useState<Record<string, QueryResult[]>>();
 
     async function executeQueries() {
-        if (!schemaType)
+        if (!isValidInput)
             return;
 
         setIsExecuting(true);
@@ -29,8 +35,12 @@ export function ExperimentsRunner({ dbs, schemaType, className }: ExperimentsRun
         const results: Record<string, QueryResult[]> = {};
 
         for (const db of dbs) {
-            console.log(`Running tests on ${db.type}`);
-            results[db.type] = testDatabase(db, schemaType);
+            const process = `Running tests on ${db.type}`;
+            console.log(process);
+            results[db.type] = await testDatabase(db, schemaType, executionsPerQuery, done => {
+                setProgress({ process, done });
+                return updateUI();
+            });
             console.log(`Results for ${db.type}:`, results[db.type]);
         }
 
@@ -40,23 +50,40 @@ export function ExperimentsRunner({ dbs, schemaType, className }: ExperimentsRun
 
     return (
         <div className={className}>
-            <div>
-                <Button variant='outline' onClick={executeQueries} disabled={isExecuting || !schemaType}>Run tests</Button>
-
-                {isExecuting && (
-                    <div className='ml-4 inline-block text-blue-500'>
-                        Executing queries...
+            <div className='flex items-end gap-4'>
+                <Label className='block'>
+                    <div className='mb-2'>
+                        Executions per query
                     </div>
-                )}
+                    <Input type='number' value={rawExecutionsPerQuery} onChange={e => setRawExecutionsPerQuery(e.target.value)} className='w-40' />
+                </Label>
+
+                <div className='flex items-center gap-4'>
+                    <Button variant='outline' onClick={executeQueries} disabled={isExecuting || !isValidInput}>Run tests</Button>
+
+                    {isExecuting ? (
+                        <div className='flex items-center gap-3 text-blue-500'>
+                            <SpinnerIcon />
+
+                            {progress && (
+                                <div>{printProgress(progress)}</div>
+                            )}
+                        </div>
+                    ) : results && (
+                        <div className='flex items-center gap-2 text-green-500'>
+                            <CheckIcon /> Tests completed
+                        </div>
+                    )}
+                </div>
             </div>
 
             {results && (
                 <div className='mt-4 space-y-4'>
                     {Object.entries(results).map(([ dbType, dbResults ]) => (
                         <div key={dbType}>
-                            <h3 className='text-lg font-semibold'>{dbType}</h3>
+                            <h3 className='text-md font-semibold'>{dbType}</h3>
 
-                            <ScrollArea className='max-h-100 flex flex-col rounded-md bg-accent'>
+                            <ScrollArea className='mt-1 max-h-100 flex flex-col rounded-md bg-accent'>
                                 <pre className='px-2 py-1 text-sm text-wrap'>
                                     {JSON.stringify(dbResults, undefined, 4)}
                                 </pre>
@@ -76,16 +103,15 @@ type QueryResult = {
     error?: string;
 };
 
-const EXECUTION_COUNTS = 40;
-
-function testDatabase(db: Database, schemaType: SchemaType): QueryResult[] {
+async function testDatabase(db: Database, schemaType: SchemaType, executionsPerQuery: number, onProgress?: (result: number) => Promise<void>): Promise<QueryResult[]> {
     const results: QueryResult[] = [];
+    const examples = db.getExamples()[schemaType].filter(example => !example.excludeFromTests);
 
-    for (const example of db.getExamples()[schemaType]) {
+    for (const example of examples) {
         try {
             console.log(`Executing query "${example.name}"`);
-            const result = testQuery(db, example);
-            console.log('Result', result);
+            const result = testQuery(db, example, executionsPerQuery);
+            console.log('Result', JSON.stringify(result));
             results.push(result);
         }
         catch (error) {
@@ -96,15 +122,17 @@ function testDatabase(db: Database, schemaType: SchemaType): QueryResult[] {
                 error: (error as Error).message,
             });
         }
+
+        await onProgress?.(results.length / examples.length);
     }
 
     return results;
 }
 
-function testQuery(db: Database, example: ExampleQuery): QueryResult {
+function testQuery(db: Database, example: ExampleQuery, executionsPerQuery: number): QueryResult {
     const executionTimesMs: number[] = [];
 
-    for (let i = 0; i < EXECUTION_COUNTS; i++) {
+    for (let i = 0; i < executionsPerQuery; i++) {
         const start = performance.now();
         const output = db.query(example.query, example.defaultLanguage);
         const end = performance.now();

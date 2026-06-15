@@ -172,6 +172,7 @@ GROUP BY customers.id
     `,
 }, {
     name: 'Query 2 - IN (slow)',
+    excludeFromTests: true,
     query: `
 -- Query 2 - IN (slow)
 -- customers which bought PRODUCT and posted about it
@@ -197,6 +198,7 @@ AND customers.id IN (
     `,
 }, {
     name: 'Query 2 - EXISTS (slow)',
+    excludeFromTests: true,
     query: `
 -- Query 2 - EXISTS (slow)
 -- customers which bought PRODUCT and posted about it
@@ -245,7 +247,8 @@ WHERE products.productId = 202
 AND CAST(SUBSTR(feedback.feedback, 2, INSTR(feedback.feedback, ',') - 2) AS REAL) < 3
     `,
 }, {
-    name: 'Query 3 - IN',
+    name: 'Query 3 - IN (slow)',
+    excludeFromTests: true,
     query: `
 -- Query 3 - IN
 -- customers which posted about PRODUCT and left negative feedback
@@ -267,7 +270,8 @@ AND customers.id IN (
 )
     `,
 }, {
-    name: 'Query 3 - EXISTS',
+    name: 'Query 3 - EXISTS (slow)',
+    excludeFromTests: true,
     query: `
 -- Query 3 - EXISTS
 -- customers which posted about PRODUCT and left negative feedback
@@ -380,4 +384,5 @@ GROUP BY TagId
     name: example.name,
     query: example.query.trim(),
     defaultLanguage: 'sql',
+    excludeFromTests: example.excludeFromTests,
 }));

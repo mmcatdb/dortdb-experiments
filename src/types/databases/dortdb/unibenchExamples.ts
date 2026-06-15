@@ -3,6 +3,8 @@ import type { DortdbLanguage, ExampleQuery } from '@/types/database';
 export const unibenchExamples: ExampleQuery[] = [ {
     name: 'Custom 1',
     defaultLanguage: 'sql',
+    // This is here just to correctly infer types.
+    excludeFromTests: undefined,
     query: `
 -- Custom Query 1
 
@@ -315,4 +317,5 @@ GROUP BY orders.PersonId, topPosters.interests
     name: example.name,
     query: example.query.trim(),
     defaultLanguage: example.defaultLanguage as DortdbLanguage,
+    excludeFromTests: example.excludeFromTests,
 }));
