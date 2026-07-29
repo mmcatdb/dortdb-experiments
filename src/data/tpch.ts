@@ -148,7 +148,7 @@ const commonSchema: Omit<DatasourceSchema, 'label' | 'file'> = {
 const commonPrefix = 'https://data.mmcatdb.com/tpch/';
 
 export const tpch: DatasourceSchema[] = [
-    '0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5',
+    'sample', '0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5',
 ].map(scale => ({
     ...commonSchema,
     label: `TPC-H ${scale}`,

@@ -3,8 +3,6 @@ import type { DortdbLanguage, ExampleQuery } from '@/types/database';
 export const unibenchExamples: ExampleQuery[] = [ {
     name: 'Custom 1',
     defaultLanguage: 'sql',
-    // This is here just to correctly infer types.
-    excludeFromTests: undefined,
     query: `
 -- Custom Query 1
 
@@ -136,6 +134,8 @@ RETURN DISTINCT tag.id
     `,
 }, {
     name: 'Query 6',
+    // This query isn't in the other databases so there is no point in measuring it. The same is true for the following queries.
+    excludeFromTests: true,
     defaultLanguage: 'sql',
     query: `
 -- Query 6
@@ -162,6 +162,7 @@ LIMIT 3
     `,
 }, {
     name: 'Query 7',
+    excludeFromTests: true,
     defaultLanguage: 'sql',
     query: `
 -- Query 7
@@ -187,6 +188,7 @@ WHERE brandProducts.brandName = 'Reebok' AND feedback.feedback[1]::number < 4 AN
     `,
 }, {
     name: 'Query 8',
+    excludeFromTests: true,
     defaultLanguage: 'sql',
     query: `
 -- Query 8
@@ -238,6 +240,7 @@ FROM (
      `,
 }, {
     name: 'Query 9',
+    excludeFromTests: true,
     defaultLanguage: 'sql',
     query: `
 -- Query 9
@@ -284,6 +287,7 @@ FROM (
     `,
 }, {
     name: 'Query 10',
+    excludeFromTests: true,
     defaultLanguage: 'sql',
     query: `
 -- Query 10
